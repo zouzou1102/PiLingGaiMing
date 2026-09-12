@@ -27,6 +27,10 @@
 *.yaml  text eol=lf
 *.svg   text eol=lf
 
+# Windows 批处理脚本必须用 CRLF：LF 行尾会让 cmd.exe 的 goto / 标签失准
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
 # 二进制：交给 git 原样存储，别做行尾转换（否则文件会损坏）
 *.png   binary
 *.jpg   binary
