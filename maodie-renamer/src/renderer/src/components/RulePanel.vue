@@ -44,7 +44,7 @@ function setNumber(key: 'seqStart' | 'seqStep' | 'seqPad', raw: string): void {
 </script>
 
 <template>
-  <section class="md-rulepanel md-scroll">
+  <section class="md-rulepanel">
     <!-- EL-040 页签组（三选一，互斥）-->
     <div class="md-tabs" role="tablist">
       <button
@@ -256,10 +256,9 @@ function setNumber(key: 'seqStart' | 'seqStep' | 'seqPad', raw: string): void {
   display: flex;
   flex-direction: column;
   gap: var(--md-space-3);
-  /* ★ 规则区按内容自适应，但允许被压缩并在自身内部滚动（md-scroll 提供 overflow-y）。
-     绝不向上顶走列表区的高度。 */
-  flex: 0 1 auto;
-  min-height: 0;
+  /* ★ 按内容完整展开，**自己不做滚动**（滚动交给外层 .md-main__right-body 整块滚）。
+     规则化模式内容再长也只是把整块工作区撑高，不去压缩列表、也不出现嵌套滚动条。 */
+  flex: 0 0 auto;
 }
 
 .md-rulepanel__form {

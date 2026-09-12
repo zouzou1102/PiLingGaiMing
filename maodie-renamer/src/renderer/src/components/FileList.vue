@@ -79,9 +79,12 @@ const visibleRows = computed(() => {
 .md-filelist {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  /* ★ 列表区最小高度：规则区（尤其规则化模式）再大也挤不掉它，保证「看得见」 */
-  min-height: 180px;
+  /* ★ 高度基准档位（180px 下限 / 38% 窗口高 / 320px 上限）+ 有剩余空间时吸收：
+     规则区再长也挤不掉它（flex-shrink = 0），规则区短时它填掉空档（flex-grow = 1），
+     所以既不会出现「被压瘪」，也不会留一条空荡荡的带子。
+     注意：列表内部仍是一个独立滚动区（虚拟滚动必需），滚动条不会消失。 */
+  flex: 1 0 auto;
+  height: clamp(180px, 38vh, 320px);
   background: var(--md-bg-card);
   border-radius: var(--md-radius-card);
   box-shadow: var(--md-shadow-card);

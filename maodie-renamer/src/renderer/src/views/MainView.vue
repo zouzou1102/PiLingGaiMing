@@ -4,7 +4,8 @@
  *
  * 布局纪律：
  *  · 左栏固定 300px（窗口 < 960px 收窄到 260px），右栏自适应
- *  · 列表区优先保留高度，规则区撑满剩余
+ *  · 右栏 = 滚动区（列表 + 规则，整体滚动）+ 常驻动作条（永远贴在窗口底部）
+ *  · 列表与规则各按自己的高度完整展开，谁也不压缩谁
  *  · 窗口宽高变化只影响右栏，左栏不变
  */
 import { computed, onMounted, ref } from 'vue'
@@ -63,10 +64,12 @@ onMounted(() => {
       <ActionPanel />
     </aside>
 
-    <!-- 右栏：R-04 列表 + R-05 规则 + R-06 动作 -->
+    <!-- 右栏：R-04 列表 + R-05 规则（两者一起滚）+ R-06 动作（常驻底部）-->
     <section class="md-main__right">
-      <FileList />
-      <RulePanel />
+      <div class="md-main__right-body md-scroll">
+        <FileList />
+        <RulePanel />
+      </div>
       <ActionBar @open-history="emit('open-history')" />
     </section>
 
@@ -106,8 +109,19 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-space-3);
-  /* ★ 规则区再高也只在自己内部滚动：不挤压列表、也不溢出窗口。
-     之前用 grid 的 auto 行 + 列表 minmax(0,1fr)，规则化模式内容一多就把列表压成 0 高。 */
+  /* 右栏只负责「滚动区 + 常驻动作条」两行；滚动全部发生在下面那个 body 里 */
   overflow: hidden;
+}
+
+/* ★ 滚动区：列表 + 规则**作为一个整体**滚动。
+   链接上一版的问题：规则区曾经自己内部滚（嵌套滚动条），列表被压到只剩最小高度。
+   现在改成 —— 两块都按自己的高度完整展开，超出窗口就整块滚；
+   动作条在这个滚动区外面，所以永远贴在窗口底部。 */
+.md-main__right-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-3);
 }
 </style>
