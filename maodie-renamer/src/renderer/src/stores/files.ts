@@ -100,7 +100,11 @@ export const useFilesStore = defineStore('files', () => {
       rule: JSON.parse(JSON.stringify(ruleStore.rule)),
       date: todayString(),
       autoResolveConflict: ruleStore.rule.autoResolveConflict,
-      snapshot: snapshot.value,
+      // ★ 必须传「普通对象」：snapshot.value 是 Vue 响应式代理，postMessage 的
+      //   结构化克隆无法克隆 Proxy（会同步抛 DataCloneError）。一旦抛出，这次预览
+      //   就永远回不来，previewPending 卡在 true → 主按钮永久置灰、状态栏一直「计算中」。
+      //   与上面的 rule 一样，过一遍 JSON 拿到纯数据。
+      snapshot: JSON.parse(JSON.stringify(snapshot.value)) as Record<string, string[]>,
     })
 
     // ★ 过期结果直接丢弃

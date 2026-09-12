@@ -102,9 +102,12 @@ onMounted(() => {
 .md-main__right {
   flex: 1 1 auto;
   min-width: 0;
-  display: grid;
-  /* 列表区占大头；规则区自适应；动作区固定高度 */
-  grid-template-rows: minmax(0, 1fr) auto var(--md-actionbar-h);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: var(--md-space-3);
+  /* ★ 规则区再高也只在自己内部滚动：不挤压列表、也不溢出窗口。
+     之前用 grid 的 auto 行 + 列表 minmax(0,1fr)，规则化模式内容一多就把列表压成 0 高。 */
+  overflow: hidden;
 }
 </style>

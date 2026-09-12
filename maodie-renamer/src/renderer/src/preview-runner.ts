@@ -78,7 +78,16 @@ export function createPreviewRunner(): PreviewRunner {
 
       return new Promise<PreviewResponse>((resolve) => {
         pending.set(req.reqId, { req, resolve })
-        worker!.postMessage(req)
+        try {
+          worker!.postMessage(req)
+        } catch (err) {
+          // 结构化克隆失败（例如误传了响应式代理）**绝不能让调用方永久等待**：
+          // 那会让 previewPending 卡在 true、主按钮再也点不动。就地算完即可 ——
+          // 与「Worker 加载失败」「Worker 运行时报错」走同一条兜底路径。
+          pending.delete(req.reqId)
+          console.warn('[md] 预览请求无法发给 Worker，就地计算：', err)
+          resolve(inlineRun(req))
+        }
       })
     },
 
