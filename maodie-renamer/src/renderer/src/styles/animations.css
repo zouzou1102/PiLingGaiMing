@@ -1,0 +1,514 @@
+/**
+ * 动效（设计规范 §6 / §7，交互说明 §7.3 / §11.1）。
+ *
+ * ⚠ 一处诚实的说明：设计规范 §6.1 把形象分成「头/耳/眼/嘴/毛发/四爪」6 组，
+ * 但 §9.2 同时说明**当前 5 个状态 SVG 是整图占位**。整图无法只动「嘴」或「耳」，
+ * 所以这里的状态切换是**整图的姿态变化**（前倾、歪头、抖动、缩放、跳跃）+
+ * 叠加元素（撒花、怒气符号）。等形象换成 6 分组图层后，把对应的
+ * `.md-cat--ST-0x` 规则改成按图层选择即可，**状态机与文案一行不用动**。
+ *
+ * 两条硬约束（PRD §4.6.3，必须在代码里再写一遍）：
+ *  1. **动作不得有歧义** —— 严禁「双肢快速上下抽动 + 躯干抖动 + 张嘴」的组合。
+ *     双爪在 ST-03 中保持静态，只有头、嘴、尾参与动作。
+ *  2. **撕咬要卡通化** —— 只做干脆的「咔嚓一口」，不做尖牙特写，
+ *     不做破碎 / 流血效果；卡片是「乖乖变成新名字飞走」。
+ */
+
+/* ══ 猫咪状态 ═════════════════════════════════════════════════════ */
+
+.md-cat {
+  width: 200px;
+  height: 200px;
+  transition: transform var(--md-dur-cat) var(--md-ease-pop);
+  transform-origin: 50% 85%;
+}
+
+.md-cat > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* ST-01 待机：轻微起伏（呼吸感）*/
+.md-cat--ST-01 {
+  animation: md-breathe 4.6s ease-in-out infinite;
+}
+
+/* ST-02 接收：歪头 6° + 尾巴快摆（整图表现为轻快左右摆动）*/
+.md-cat--ST-02 {
+  transform: rotate(-6deg);
+  animation: md-wag 0.8s ease-in-out infinite;
+}
+
+/* ST-03 改名中：前倾 + 「咔嚓」咬合（42% 那一口）*/
+.md-cat--ST-03 {
+  transform: rotate(9deg) translateY(6px) scale(1.04);
+  animation: md-chomp 1.6s ease-in-out infinite;
+}
+
+/* ST-04 成功：上扬 + 轻跳 */
+.md-cat--ST-04 {
+  animation: md-cheer 0.9s var(--md-ease-pop) 2;
+}
+
+/* ST-05 失败：炸毛（放大约 1.16）+ 短促抖动 */
+.md-cat--ST-05 {
+  animation: md-puff 0.5s ease-out 1;
+  transform: scale(1.16);
+}
+
+@keyframes md-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-3px) scaleY(1.015);
+  }
+}
+
+@keyframes md-wag {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes md-chomp {
+  0%,
+  30% {
+    transform: rotate(9deg) translateY(6px) scale(1.04);
+  }
+  /* 42%：咬合 —— 干脆的一口 */
+  42% {
+    transform: rotate(13deg) translateY(10px) scale(1.06, 0.95);
+  }
+  50%,
+  100% {
+    transform: rotate(9deg) translateY(6px) scale(1.04);
+  }
+}
+
+@keyframes md-cheer {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+}
+
+@keyframes md-puff {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.2) rotate(-2deg);
+  }
+  60% {
+    transform: scale(1.14) rotate(2deg);
+  }
+  100% {
+    transform: scale(1.16);
+  }
+}
+
+/* ── 叠加元素：撒花 / 怒气符号 ─────────────────────────────────── */
+
+.md-sparkles,
+.md-anger {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.md-sparkle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffc94d;
+  opacity: 0;
+  animation: md-sparkle 1.4s ease-out infinite;
+}
+.md-sparkle:nth-child(2) {
+  background: #ffd98a;
+  animation-delay: 0.35s;
+}
+.md-sparkle:nth-child(3) {
+  animation-delay: 0.7s;
+}
+
+@keyframes md-sparkle {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.4);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1);
+  }
+}
+
+.md-anger {
+  color: var(--md-bad);
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--md-space-6);
+  padding-top: var(--md-space-1);
+  animation: md-anger 1s ease-in-out infinite;
+}
+
+@keyframes md-anger {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* ══ ST-03 咬名字卡片（交互说明 §7.3 的 8 个关键进度点）═══════════ */
+
+.md-bitelane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 62%; /* 位于耄耋身前、下巴下方约 62% 高度处 */
+  height: 34px;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.md-bitechip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-space-1);
+  padding: 5px 10px;
+  border-radius: var(--md-radius-chip);
+  border: 1px solid var(--md-line);
+  background: var(--md-bg-card);
+  box-shadow: var(--md-shadow-card);
+  font-size: 10.5px;
+  line-height: 14px;
+  white-space: nowrap;
+  max-width: 220px;
+  animation: md-bitecycle 1.6s linear forwards;
+}
+
+.md-bitechip__old,
+.md-bitechip__new {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.md-bitechip__new {
+  position: absolute;
+  left: 10px;
+  color: var(--md-orange-dark);
+  opacity: 0;
+}
+
+/* 速度线：仅在「飞向嘴边」阶段出现 */
+.md-bitechip__speed {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  width: 10px;
+  height: 1.5px;
+  background: var(--md-line-strong);
+  opacity: 0;
+  box-shadow: 0 4px 0 var(--md-line-strong), 0 -4px 0 var(--md-line-strong);
+}
+
+/**
+ * 单张卡片一轮 1.6s：
+ *   0%  右侧场外、缩小 + 透明
+ *   14% 淡入、速度线亮起
+ *   38% 到达嘴边（居中）
+ *   42% 咬合：卡片被压扁一下
+ *   56% 底色转浅橘、描边变橘
+ *   62% 旧名淡出、新名淡入
+ *   86% 向左侧飞出
+ *   100% 飞出并淡出
+ */
+@keyframes md-bitecycle {
+  0% {
+    transform: translateX(150px) scale(0.6);
+    opacity: 0;
+  }
+  14% {
+    transform: translateX(96px) scale(0.9);
+    opacity: 1;
+  }
+  38% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  42% {
+    transform: translateX(0) scale(1.06, 0.82);
+  }
+  56% {
+    transform: translateX(0) scale(1);
+    background: var(--md-highlight-bg);
+    border-color: var(--md-orange-accent);
+  }
+  86% {
+    transform: translateX(-110px) scale(0.94);
+    opacity: 1;
+    background: var(--md-highlight-bg);
+    border-color: var(--md-orange-accent);
+  }
+  100% {
+    transform: translateX(-160px) scale(0.8);
+    opacity: 0;
+    background: var(--md-highlight-bg);
+    border-color: var(--md-orange-accent);
+  }
+}
+
+@keyframes md-speedline {
+  0%,
+  10% {
+    opacity: 0;
+  }
+  20%,
+  34% {
+    opacity: 1;
+  }
+  38%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.md-bitechip__speed {
+  animation: md-speedline 1.6s linear forwards;
+}
+
+/* 旧名 / 新名的交接（62% 处）*/
+.md-bitechip__old {
+  animation: md-oldname 1.6s linear forwards;
+}
+@keyframes md-oldname {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.md-bitechip__new {
+  animation: md-newname 1.6s linear forwards;
+}
+@keyframes md-newname {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  62%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ══ 拖拽蒙层（IX-022）═══════════════════════════════════════════ */
+
+.md-dropzone {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--md-space-3);
+  border: 2px dashed var(--md-orange-accent);
+  border-radius: var(--md-radius-card);
+  background: rgba(255, 246, 233, 0.92);
+  color: var(--md-orange-dark);
+  font-family: var(--md-font-brand);
+  font-size: 20px;
+  animation: md-fadein var(--md-dur-modal) var(--md-ease-modal);
+}
+
+.md-dropzone--reject {
+  border-color: var(--md-bad);
+  background: rgba(253, 242, 241, 0.94);
+  color: var(--md-bad);
+  font-family: var(--md-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ══ 弹窗（设计规范 §5.4）═══════════════════════════════════════ */
+
+.md-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  /* 遮罩覆盖整个窗口（含标题栏）—— 这也是弹窗必须 Teleport 到 body 的原因 */
+  background: rgba(58, 42, 32, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: md-fadein var(--md-dur-modal) ease;
+}
+
+.md-modal {
+  background: var(--md-bg-card);
+  border-radius: var(--md-radius-modal);
+  box-shadow: var(--md-shadow-modal);
+  padding: var(--md-space-6);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  animation: md-modalin var(--md-dur-modal) var(--md-ease-modal);
+}
+
+.md-modal__title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  margin: 0 0 var(--md-space-4);
+}
+
+.md-modal__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.md-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: var(--md-space-5);
+}
+
+@keyframes md-modalin {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes md-fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ══ 列表行（设计规范 §5.2）═════════════════════════════════════ */
+
+.md-diffline {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.md-diff-del {
+  color: var(--md-line-strong);
+  text-decoration: line-through;
+}
+
+.md-diff-add {
+  color: var(--md-orange-dark);
+  background: var(--md-highlight-bg);
+  border-radius: 4px;
+}
+
+.md-diff-none {
+  color: var(--md-line-strong);
+}
+
+.md-filelist__row--conflict,
+.md-filelist__row--invalid {
+  background: #fff7f6;
+}
+
+.md-filelist__row--conflict .md-filelist__name,
+.md-filelist__row--conflict .md-diff-add,
+.md-filelist__row--invalid .md-filelist__name,
+.md-filelist__row--invalid .md-diff-add {
+  color: var(--md-bad);
+  background: transparent;
+}
+
+.md-filelist__row--invalid .md-filelist__name {
+  text-decoration: line-through;
+}
+
+.md-filelist__row:hover {
+  background: var(--md-bg-warm);
+}
+
+.md-filelist__row--conflict:hover,
+.md-filelist__row--invalid:hover {
+  background: var(--md-bad-bg-soft);
+}
+
+.md-filelist__del {
+  opacity: 0;
+  transition: opacity var(--md-dur-hover) ease;
+}
+.md-filelist__row:hover .md-filelist__del {
+  opacity: 1;
+}
+
+/* ══ 历史卡片（设计规范 §5.3）═══════════════════════════════════ */
+
+.md-history-card {
+  background: var(--md-bg-card);
+  border-radius: 12px;
+  box-shadow: var(--md-shadow-card);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.md-history-card--undone {
+  background: #f7f3ec;
+  box-shadow: none;
+  color: var(--md-ink-4);
+}
+
+.md-history-card--undone .md-history-card__summary {
+  color: var(--md-ink-4);
+}
+
+/* ══ 其它 ════════════════════════════════════════════════════════ */
+
+.md-spin {
+  animation: md-spin 1s linear infinite;
+}
+@keyframes md-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+out/
+release/
+build/icon.ico
+coverage/
+.vite/
+*.log
+.DS_Store
+tmp-test/

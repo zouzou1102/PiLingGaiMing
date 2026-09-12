@@ -1,0 +1,53 @@
+# 耄耋改名 · electron-builder 配置（对应技术方案文档 §8.1）
+
+appId: com.maodie.renamer
+productName: 耄耋改名
+copyright: Copyright © 2026 MaoDie Renamer
+
+directories:
+  output: release
+  buildResources: build
+
+# ★ 用**白名单**，且**刻意不带 node_modules**：
+#   本工程零运行时依赖 —— vue / pinia 会被 Vite 完全打进渲染产物，
+#   主进程与 preload 只用 Node 内置模块（已被 electron-vite 外部化）。
+#   带上 node_modules 会把 devDependencies 一起塞进 asar（实测 +15.8MB），
+#   而它们一行都不会被执行。
+#
+#   ⚠ 将来若真的引入运行时依赖（例如某个原生模块），
+#   必须在这里显式补上它的路径，否则打包后会缺模块。
+files:
+  - 'out/**/*'
+  - 'resources/**/*'
+  - 'package.json'
+
+asar: true
+# resources 走 asar 内部读取即可（Electron 已为 fs 打过 asar 补丁），无需解包
+asarUnpack: []
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  # ★ 体积优化：只留中文 locale，砍掉其余 50+ 个（预估 −8 ~ 15 MB）
+  electronLanguages:
+    - zh-CN
+  # 首版不改动：保持默认的 exe 元数据
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 耄耋改名
+  artifactName: MaoDieRenamer-Setup-${version}.${ext}
+  # 卸载不删用户历史：用户可能还想看（数据库设计 §4.7）
+  deleteAppDataOnUninstall: false
+  # 安装完成后不自动运行——用户自己决定何时打开
+  runAfterFinish: false
+
+# 明确不发布到任何远程：本项目定位为完全本地离线
+publish: null

@@ -1,0 +1,44 @@
+# ══════════════════════════════════════════════════════════════════
+#  行尾符统一策略
+#
+#  为什么需要它：Windows 上 git 默认可能把文本文件存成 CRLF，
+#  而 macOS / Linux 上是 LF。同一个人在另一台机器上 clone 后，
+#  整个文件会因为「行尾符不同」被 git 判成「全部改动」，
+#  diff 变成一坨、看不出真正改了什么。
+#
+#  这里统一规定：源码与文档一律以 LF 存进仓库（各人本地检出时
+#  git 会按自己系统自动转换），二进制文件不做任何处理。
+# ══════════════════════════════════════════════════════════════════
+
+* text=auto
+
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.vue   text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.json  text eol=lf
+*.jsonc text eol=lf
+*.md    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.svg   text eol=lf
+
+# 二进制：交给 git 原样存储，别做行尾转换（否则文件会损坏）
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.xlsx  binary
+*.xls   binary
+*.exe   binary
+*.dll   binary
+*.woff  binary
+*.woff2 binary
+
+# 打包产物与锁文件的 diff：锁文件不要参与语言统计
+package-lock.json  -diff linguist-generated

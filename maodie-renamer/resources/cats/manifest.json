@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "comment": "耄耋形象清单。替换形象 = 换掉本目录下的 SVG + 改这里的 file 名，代码一行不用动。",
+  "states": {
+    "ST-01": { "file": "cat-ST-01-待机.svg", "holdMs": 0 },
+    "ST-02": { "file": "cat-ST-02-接收.svg", "holdMs": 1500 },
+    "ST-03": { "file": "cat-ST-03-改名中.svg", "holdMs": 0 },
+    "ST-04": { "file": "cat-ST-04-成功.svg", "holdMs": 3000 },
+    "ST-05": { "file": "cat-ST-05-失败.svg", "holdMs": 3000 }
+  },
+  "text": {
+    "ST-01": "待机中…",
+    "ST-02": "收到啦，{n} 个！",
+    "ST-03": "正在改名…（{n}/{m}）",
+    "ST-04": "改好啦，得意！",
+    "ST-05": "炸毛了！有 {n} 项没改成"
+  }
+}

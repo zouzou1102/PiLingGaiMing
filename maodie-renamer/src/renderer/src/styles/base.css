@@ -1,0 +1,594 @@
+/**
+ * 基础样式与组件样式。
+ *
+ * 组件样式集中在这里（而不是散在每个 .vue 的 <style> 里）的理由：
+ * 设计规范 §4 的「组件状态矩阵」是一张**必须全状态实现**的表
+ * （默认 / 悬停 / 按下 / 禁用），集中描述才不会漏态。
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--md-font-ui);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--md-ink-1);
+  background: var(--md-bg-cream);
+  /* 桌面软件不该有网页的文本选择手感 */
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ── 焦点可见（无障碍：2px 橘色描边，不遮挡内容）─────────────────── */
+:focus-visible {
+  outline: 2px solid var(--md-orange-primary);
+  outline-offset: 1px;
+}
+
+/* ── 让窗口自身带圆角与阴影（frame:false 下的视觉外框）────────────── */
+.md-window {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--md-bg-cream);
+  overflow: hidden;
+}
+
+/* ══ 标题栏 R-01 ══════════════════════════════════════════════════ */
+
+.md-titlebar {
+  height: var(--md-titlebar-h);
+  flex: 0 0 auto;
+  background: var(--md-bg-titlebar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  /* 自绘标题栏：留出可拖拽区域 */
+  -webkit-app-region: drag;
+}
+
+.md-titlebar__brand {
+  font-family: var(--md-font-brand);
+  font-size: 20px;
+  line-height: 26px;
+  color: var(--md-ink-1);
+}
+
+.md-titlebar__btns {
+  display: flex;
+  gap: var(--md-space-1);
+  -webkit-app-region: no-drag;
+}
+
+.md-winbtn {
+  width: 38px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--md-dur-hover) ease;
+}
+
+.md-winbtn:hover {
+  background: rgba(224, 139, 51, 0.12);
+}
+
+.md-winbtn--close:hover {
+  background: var(--md-bad);
+}
+
+/* 关闭图标悬停变白（切图资源只给了深色版本）*/
+.md-winbtn--close:hover .md-icon > svg {
+  filter: brightness(0) invert(1);
+}
+
+/* ══ 图标 ═════════════════════════════════════════════════════════ */
+
+.md-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+/* 切图 SVG 带了 width/height 属性，用 CSS 覆盖成「跟随容器尺寸」*/
+.md-icon > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.md-icon--12 {
+  width: 12px;
+  height: 12px;
+}
+.md-icon--14 {
+  width: 14px;
+  height: 14px;
+}
+.md-icon--15 {
+  width: 15px;
+  height: 15px;
+}
+.md-icon--16 {
+  width: 16px;
+  height: 16px;
+}
+
+/* ══ 按钮（设计规范 §4.1，四种类型 × 四态）════════════════════════ */
+
+.md-btn {
+  height: var(--md-btn-h);
+  padding: 0 26px;
+  border: 0;
+  border-radius: var(--md-radius-btn);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-space-2);
+  transition:
+    background var(--md-dur-hover) ease,
+    transform var(--md-dur-press) ease,
+    box-shadow var(--md-dur-hover) ease;
+}
+
+.md-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.md-btn:disabled {
+  cursor: not-allowed;
+  background: var(--md-bg-disabled);
+  color: var(--md-ink-4);
+  box-shadow: none;
+}
+
+/* 主按钮 */
+.md-btn--primary {
+  background: var(--md-orange-primary);
+  color: #ffffff;
+  box-shadow: var(--md-shadow-card);
+}
+.md-btn--primary:hover:not(:disabled) {
+  background: var(--md-orange-accent);
+  box-shadow: var(--md-shadow-btn-hover);
+  transform: translateY(-1px);
+}
+.md-btn--primary:active:not(:disabled) {
+  background: var(--md-orange-dark);
+}
+/* 执行中：文案变「取消」，底色变红（设计规范 §4.1）*/
+.md-btn--danger {
+  background: var(--md-bad);
+  color: #ffffff;
+  box-shadow: var(--md-shadow-card);
+}
+.md-btn--danger:hover:not(:disabled) {
+  background: var(--md-bad-hover);
+  box-shadow: var(--md-shadow-btn-hover);
+}
+
+/* 次按钮 */
+.md-btn--secondary {
+  background: var(--md-bg-card);
+  color: var(--md-ink-1);
+  border: 1px solid var(--md-line);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 20px;
+}
+.md-btn--secondary:hover:not(:disabled) {
+  background: #fff3e2;
+  border-color: var(--md-orange-accent);
+  color: var(--md-orange-dark);
+}
+.md-btn--secondary:active:not(:disabled) {
+  background: var(--md-warn-bg);
+}
+.md-btn--secondary:disabled {
+  border-color: var(--md-line);
+}
+
+/* 幽灵按钮 */
+.md-btn--ghost {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: var(--md-radius-input);
+  background: transparent;
+  color: var(--md-ink-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+.md-btn--ghost:hover:not(:disabled) {
+  background: var(--md-bg-sunken);
+}
+.md-btn--ghost:disabled {
+  background: transparent;
+  color: var(--md-line-strong);
+}
+
+/* 历史页卡片上的「撤销这一条」 */
+.md-btn--card {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--md-radius-input);
+  background: #fff3e2;
+  color: var(--md-orange-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+.md-btn--card:hover:not(:disabled) {
+  background: var(--md-warn-bg);
+}
+
+/* ══ 输入类（设计规范 §4.2）═══════════════════════════════════════ */
+
+.md-input {
+  height: var(--md-ctrl-h);
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--md-line);
+  border-radius: var(--md-radius-input);
+  background: var(--md-bg-card);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--md-ink-1);
+  transition:
+    border-color var(--md-dur-hover) ease,
+    box-shadow var(--md-dur-hover) ease;
+}
+
+.md-input::placeholder {
+  color: var(--md-ink-4);
+}
+
+.md-input:focus {
+  outline: none;
+  border: 2px solid var(--md-orange-primary);
+  box-shadow: 0 0 8px 2px rgba(245, 166, 35, 0.18);
+}
+
+.md-input:disabled {
+  background: #f7f3ec;
+  border-color: #eae3d8;
+  color: var(--md-ink-4);
+}
+
+.md-input--num {
+  width: 104px;
+  font-family: var(--md-font-num);
+  font-weight: 500;
+}
+
+.md-select {
+  height: var(--md-ctrl-h);
+  padding: 0 12px;
+  border: 1px solid var(--md-line);
+  border-radius: var(--md-radius-input);
+  background: var(--md-bg-card);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--md-ink-1);
+  cursor: pointer;
+}
+
+.md-select:disabled {
+  background: #f7f3ec;
+  color: var(--md-ink-4);
+  cursor: not-allowed;
+}
+
+/* ══ 选择类（设计规范 §4.3）═══════════════════════════════════════ */
+
+.md-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-space-2);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--md-ink-2);
+}
+
+.md-check input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.md-check__box {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--md-line-strong);
+  border-radius: 5px;
+  background: var(--md-bg-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--md-dur-hover) ease;
+}
+
+.md-check--sm .md-check__box {
+  width: 16px;
+  height: 16px;
+}
+
+.md-check__box .md-icon {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+}
+.md-check__box .md-icon > svg path {
+  fill: #ffffff;
+}
+
+.md-check input:checked + .md-check__box {
+  background: var(--md-orange-primary);
+  border-color: var(--md-orange-primary);
+}
+.md-check input:checked + .md-check__box .md-icon {
+  opacity: 1;
+}
+
+.md-check input:disabled + .md-check__box {
+  background: var(--md-bg-sunken);
+  border-color: #e0d6c8;
+}
+.md-check input:disabled ~ .md-check__label {
+  color: var(--md-ink-4);
+}
+
+.md-check input:focus-visible + .md-check__box {
+  outline: 2px solid var(--md-orange-primary);
+  outline-offset: 1px;
+}
+
+/* 开关（轨道 46×26，滑块 20×20）*/
+.md-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-space-2);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--md-ink-2);
+}
+
+.md-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.md-switch__track {
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--md-bg-disabled);
+  position: relative;
+  transition: background var(--md-dur-hover) ease;
+  flex: 0 0 auto;
+}
+
+.md-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform var(--md-dur-hover) var(--md-ease-pop);
+}
+
+.md-switch input:checked + .md-switch__track {
+  background: var(--md-orange-primary);
+}
+.md-switch input:checked + .md-switch__track .md-switch__thumb {
+  transform: translateX(20px);
+}
+.md-switch input:focus-visible + .md-switch__track {
+  outline: 2px solid var(--md-orange-primary);
+  outline-offset: 2px;
+}
+
+/* ══ 徽标 / 状态点（设计规范 §4.4）════════════════════════════════ */
+
+.md-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-space-1);
+  padding: 3px 8px;
+  border-radius: var(--md-radius-badge);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.md-badge--bad {
+  background: var(--md-bad-bg);
+  color: var(--md-bad);
+}
+.md-badge--ok {
+  background: var(--md-ok-bg);
+  color: var(--md-ok);
+}
+.md-badge--muted {
+  background: var(--md-neutral-bg);
+  color: var(--md-ink-3);
+}
+.md-badge--warn {
+  background: var(--md-warn-bg);
+  color: var(--md-warn);
+}
+
+.md-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.md-dot--sm {
+  width: 8px;
+  height: 8px;
+}
+.md-dot--ok {
+  background: var(--md-ok);
+}
+.md-dot--run {
+  background: var(--md-orange-primary);
+}
+.md-dot--bad {
+  background: var(--md-bad);
+}
+
+/* ══ 图标按钮 ═════════════════════════════════════════════════════ */
+
+.md-iconbtn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--md-dur-hover) ease;
+}
+.md-iconbtn:hover {
+  background: var(--md-bg-sunken);
+}
+
+/* ══ 进度条 ═══════════════════════════════════════════════════════ */
+
+.md-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--md-line);
+  overflow: hidden;
+  width: 100%;
+}
+
+.md-progress__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--md-orange-primary);
+  transition: width var(--md-dur-progress) linear;
+}
+
+.md-progress--cancel .md-progress__fill {
+  background: var(--md-bad);
+}
+
+/* ══ 页签组（设计规范 §4.3）═══════════════════════════════════════ */
+
+.md-tabs {
+  display: flex;
+  gap: var(--md-space-1);
+  padding: var(--md-space-1);
+  border-radius: var(--md-radius-tabwrap);
+  background: var(--md-bg-sunken);
+}
+
+.md-tab {
+  flex: 1;
+  height: 34px;
+  border: 0;
+  border-radius: var(--md-radius-tab);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--md-ink-3);
+  cursor: pointer;
+  transition: all var(--md-dur-hover) ease;
+}
+
+.md-tab--active {
+  background: var(--md-bg-card);
+  color: var(--md-orange-dark);
+  font-weight: 600;
+  box-shadow: var(--md-shadow-tab);
+}
+
+/* ══ 卡片 / 分区 ══════════════════════════════════════════════════ */
+
+.md-card {
+  background: var(--md-bg-card);
+  border-radius: var(--md-radius-card);
+  box-shadow: var(--md-shadow-card);
+}
+
+.md-section-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-ink-2);
+  margin: 0 0 var(--md-space-2);
+}
+
+.md-hint {
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--md-ink-3);
+}
+
+.md-row {
+  display: flex;
+  align-items: center;
+  gap: var(--md-space-2);
+}
+
+.md-spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-space-2);
+}
+
+/* 滚动条：加粗缓动（交互说明 IX-032）*/
+.md-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.md-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.md-scroll::-webkit-scrollbar-thumb {
+  background: var(--md-bg-disabled);
+  border-radius: 4px;
+  transition: background var(--md-dur-hover) ease;
+}
+.md-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--md-line-strong);
+}

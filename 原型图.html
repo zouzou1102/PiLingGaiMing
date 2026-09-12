@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>耄耋改名 · 可点击原型 v1.1</title>
+<style>
+/* ============================================================
+   耄耋改名 · 可点击高保真原型
+   对应文档：PRD.md v1.1 / 交互说明文档.md v1.1
+   本文件中 div 的 id 与交互文档的 EL-xxx 编号一一对应
+   ============================================================ */
+
+:root{
+  --orange:#F5A623;
+  --orange-deep:#FF8A3D;
+  --orange-dark:#E08B33;
+  --cream:#FFFBF5;
+  --card:#FFFFFF;
+  --ink:#3A2A20;
+  --ink-2:#6B5B4D;
+  --ink-3:#8A8178;
+  --line:#F0E4D4;
+  --ok:#4CAF7D;
+  --bad:#E5544B;
+  --warn:#F0A020;
+  --shadow:0 4px 16px rgba(180,120,60,.12);
+  --shadow-lg:0 18px 48px rgba(120,80,40,.22);
+  --r-card:16px;
+  --r-btn:12px;
+  --r-input:10px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:linear-gradient(160deg,#F6EFE4 0%,#EFE3D3 45%,#F3E7D8 100%);
+  color:var(--ink);
+  font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Source Han Sans SC",system-ui,sans-serif;
+  min-height:100vh;
+  padding:28px 20px 60px;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1120px;margin:0 auto;}
+
+/* ---------- 页面标题 ---------- */
+.page-hd{margin-bottom:16px;}
+.page-hd h1{font-size:19px;margin:0 0 6px;letter-spacing:.5px;}
+.page-hd p{margin:0;font-size:12.5px;color:var(--ink-3);line-height:1.7;}
+.page-hd code{
+  background:rgba(245,166,35,.14);color:var(--orange-dark);
+  padding:1px 6px;border-radius:5px;font-size:12px;
+}
+
+/* ============================================================
+   SCR-01 主窗口
+   ============================================================ */
+.win{
+  background:var(--cream);
+  border-radius:18px;
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  border:1px solid rgba(224,139,51,.18);
+  position:relative;
+}
+/* R-01 标题栏 */
+.titlebar{
+  height:44px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 8px 0 16px;
+  background:linear-gradient(90deg,#FFF4E4,#FFEFDA);
+  border-bottom:1px solid var(--line);
+  user-select:none;
+}
+.tb-left{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;letter-spacing:.6px;}
+.cat-mini{
+  width:22px;height:22px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#FFD79A,#F29B3E);
+  position:relative;flex:0 0 auto;
+}
+.cat-mini::before,.cat-mini::after{
+  content:"";position:absolute;top:-3px;width:0;height:0;
+  border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #F5A93E;
+}
+.cat-mini::before{left:1px;transform:rotate(-16deg);}
+.cat-mini::after{right:1px;transform:rotate(16deg);}
+.tb-right{display:flex;gap:2px;}
+.tbtn{
+  width:38px;height:30px;border:0;background:transparent;color:var(--ink-2);
+  font-size:12px;cursor:pointer;border-radius:7px;font-family:inherit;
+}
+.tbtn:hover{background:rgba(224,139,51,.12);}
+.tbtn.close:hover{background:var(--bad);color:#fff;}
+
+/* 主体：左右分栏 */
+.win-body{display:flex;min-height:566px;}
+.col-left{
+  width:300px;flex:0 0 300px;
+  background:linear-gradient(180deg,#FFF6E9,#FFEFDC);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  padding:14px;
+  gap:12px;
+}
+
+/* R-02 形象区 */
+.r-cat{
+  background:var(--card);border-radius:var(--r-card);box-shadow:var(--shadow);
+  padding:8px 10px 12px;display:flex;flex-direction:column;align-items:center;
+  flex:1 1 auto;min-height:0;
+}
+.cat-wrap{width:100%;flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;}
+.cat-wrap svg{width:100%;max-width:260px;height:auto;display:block;overflow:visible;}
+.cat-status{
+  margin-top:4px;font-size:13px;font-weight:700;color:var(--orange-dark);
+  background:rgba(245,166,35,.12);padding:5px 14px;border-radius:999px;
+  white-space:nowrap;
+}
+
+/* ST-03 「咬名字」动画：一列小卡片从右往左经过耄耋嘴边 */
+.bite-lane{
+  position:absolute;left:0;right:0;top:62%;height:38px;
+  display:none;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+.st-busy .bite-lane{display:flex;}
+.chip{
+  display:flex;align-items:center;gap:6px;
+  background:#fff;border-radius:9px;padding:5px 10px;
+  box-shadow:0 3px 10px rgba(180,120,60,.24);
+  font-size:10.5px;font-weight:700;color:var(--ink-2);
+  white-space:nowrap;position:relative;opacity:0;
+  border:1.5px solid rgba(224,139,51,.22);
+}
+.chip .ci{display:flex;align-items:center;flex:0 0 auto;}
+.chip .names{display:grid;grid-template-areas:"n";}
+.chip .cn{grid-area:n;}
+.chip .cn.new{color:var(--orange-dark);opacity:0;}
+.chip.run{animation:chipFly 1.6s cubic-bezier(.34,.9,.4,1) both;}
+.chip.run .cn.old{animation:fadeOld 1.6s both;}
+.chip.run .cn.new{animation:fadeNew 1.6s both;}
+.chip.run::after{animation:spdA 1.6s both;}
+.chip.run::before{animation:spdB 1.6s both;}
+@keyframes chipFly{
+  0%{transform:translateX(120px) scale(.86);opacity:0;background:#fff;border-color:rgba(224,139,51,.22);}
+  14%{opacity:1;}
+  38%{transform:translateX(0) scale(1);opacity:1;background:#fff;}
+  46%{transform:translateX(0) scale(.93);}
+  56%{transform:translateX(0) scale(1);background:#FFF3DE;border-color:rgba(245,166,35,.6);}
+  86%{transform:translateX(-120px) scale(.95);opacity:1;background:#FFE6BE;}
+  100%{transform:translateX(-144px) scale(.9);opacity:0;background:#FFE6BE;}
+}
+@keyframes fadeOld{0%,54%{opacity:1}62%,100%{opacity:0}}
+@keyframes fadeNew{0%,54%{opacity:0}62%,100%{opacity:1}}
+.chip::before,.chip::after{
+  content:"";position:absolute;border-radius:2px;opacity:0;
+  background:rgba(245,166,35,.6);height:2px;
+}
+.chip::after{right:-17px;top:11px;width:12px;}
+.chip::before{right:-24px;top:19px;width:8px;}
+@keyframes spdA{0%,12%{opacity:0}22%,40%{opacity:.85}54%,100%{opacity:0}}
+@keyframes spdB{0%,16%{opacity:0}26%,40%{opacity:.7}54%,100%{opacity:0}}
+
+/* R-03 操作区 */
+.r-ops{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;}
+.btn{
+  border:0;font-family:inherit;font-size:13.5px;font-weight:700;
+  border-radius:var(--r-btn);padding:11px 14px;cursor:pointer;
+  transition:transform .12s ease,box-shadow .18s ease,background .18s ease;
+  letter-spacing:.4px;
+}
+.btn:active{transform:scale(.96);}
+.btn-soft{
+  background:#fff;color:var(--ink);
+  box-shadow:0 2px 8px rgba(180,120,60,.13),inset 0 0 0 1.5px rgba(245,166,35,.35);
+}
+.btn-soft:hover{background:#FFF8EE;transform:translateY(-1px);}
+.btn-ghost{
+  background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1.5px var(--line);
+}
+.btn-ghost:hover{background:#fff;color:var(--ink-2);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--orange),var(--orange-deep));
+  color:#fff;box-shadow:0 4px 14px rgba(245,166,35,.4);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,166,35,.5);}
+.btn-primary:disabled{
+  background:#EDE3D6;color:#B9AC9D;box-shadow:none;cursor:not-allowed;transform:none;
+}
+.hint{font-size:11.5px;color:var(--ink-3);text-align:center;margin-top:2px;letter-spacing:.3px;}
+
+/* 右侧 */
+.col-right{flex:1 1 auto;display:flex;flex-direction:column;padding:14px;gap:12px;min-width:0;}
+.region{background:var(--card);border-radius:var(--r-card);box-shadow:var(--shadow);}
+.region-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-2);font-weight:700;
+}
+.region-hd .muted{color:var(--ink-3);font-weight:400;}
+
+/* R-04 列表区 */
+.r-list{flex:1 1 auto;display:flex;flex-direction:column;min-height:180px;overflow:hidden;}
+.list{overflow-y:auto;flex:1 1 auto;padding:4px 0;}
+.list::-webkit-scrollbar{width:8px;}
+.list::-webkit-scrollbar-thumb{background:#EBDCC8;border-radius:4px;}
+.row{
+  display:grid;
+  grid-template-columns:26px 1fr 22px 1fr 62px 24px;
+  align-items:center;gap:8px;
+  padding:7px 12px;font-size:12.5px;
+  border-bottom:1px solid #FBF5EC;
+}
+.row:hover{background:#FFFCF6;}
+.row:last-child{border-bottom:0;}
+.idx{color:#C4B8A8;font-size:11px;text-align:right;}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nm.old{color:var(--ink-2);}
+.nm.new{color:var(--ink);font-weight:700;}
+.arrow{color:#D8CBB8;text-align:center;font-size:11px;}
+.hl{background:rgba(245,166,35,.22);color:#C07000;border-radius:3px;padding:0 1px;font-weight:800;}
+.del{color:#BCAFA0;text-decoration:line-through;}
+.badge{
+  font-size:10.5px;padding:2px 7px;border-radius:999px;text-align:center;
+  white-space:nowrap;font-weight:700;
+}
+.badge.ok{background:rgba(76,175,125,.14);color:var(--ok);}
+.badge.none{background:#F5F0E8;color:#B0A494;}
+.badge.conf{background:rgba(229,84,75,.14);color:var(--bad);}
+.badge.bad{background:rgba(229,84,75,.14);color:var(--bad);}
+.row.is-conflict{background:rgba(229,84,75,.05);}
+.row.is-invalid{background:rgba(229,84,75,.05);}
+.row.is-conflict .nm.new,.row.is-invalid .nm.new{color:var(--bad);text-decoration:line-through;}
+.xbtn{
+  border:0;background:transparent;color:#D3C6B5;cursor:pointer;font-size:14px;
+  line-height:1;padding:2px;border-radius:5px;opacity:0;transition:opacity .15s;
+}
+.row:hover .xbtn{opacity:1;}
+.xbtn:hover{color:var(--bad);background:rgba(229,84,75,.1);}
+.empty{
+  flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;color:var(--ink-3);font-size:12.5px;padding:24px 16px;text-align:center;
+}
+.empty .paw{font-size:26px;opacity:.55;}
+
+/* R-05 规则区 */
+.r-rule{padding:12px 14px 14px;flex:0 0 auto;}
+.tabs{display:flex;gap:8px;margin-bottom:12px;}
+.tab{
+  flex:1;border:0;font-family:inherit;font-size:12.5px;font-weight:700;
+  padding:9px 6px;border-radius:9px;cursor:pointer;
+  background:#FBF6EF;color:var(--ink-3);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .16s;
+}
+.tab .dot{width:11px;height:11px;border-radius:50%;border:2px solid #D6C9B8;flex:0 0 auto;}
+.tab:hover{background:#FFF6E8;color:var(--ink-2);}
+.tab.on{background:linear-gradient(135deg,#FFF0D8,#FFE6C4);color:var(--orange-dark);box-shadow:inset 0 0 0 1.5px rgba(245,166,35,.5);}
+.tab.on .dot{border-color:var(--orange);background:var(--orange);}
+.pane{display:none;}
+.pane.on{display:block;}
+.frow{display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;}
+.frow label{font-size:12px;color:var(--ink-2);white-space:nowrap;}
+input[type=text],input[type=number],select{
+  font-family:inherit;font-size:12.5px;color:var(--ink);
+  border:1.5px solid var(--line);background:#FFFDF9;
+  border-radius:var(--r-input);padding:8px 10px;outline:none;
+  transition:border-color .16s,box-shadow .16s;min-width:0;
+}
+input[type=text]:focus,input[type=number]:focus,select:focus{
+  border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,166,35,.16);
+}
+.grow{flex:1 1 auto;}
+.w70{width:70px;}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);cursor:pointer;user-select:none;}
+.chk input{accent-color:var(--orange);width:15px;height:15px;cursor:pointer;margin:0;}
+.rowline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:2px;padding-top:10px;border-top:1px dashed var(--line);}
+.tip{font-size:11px;color:var(--ink-3);line-height:1.6;margin:2px 0 0;}
+.tip b{color:var(--orange-dark);font-weight:700;}
+
+/* R-06 动作区 */
+.r-actions{display:flex;gap:10px;flex:0 0 auto;}
+.r-actions .btn-primary{flex:1 1 auto;padding:14px;font-size:14.5px;}
+.r-actions .btn-undo{
+  flex:0 0 132px;background:#fff;color:var(--ink-2);
+  box-shadow:0 2px 8px rgba(180,120,60,.13),inset 0 0 0 1.5px var(--line);
+}
+.r-actions .btn-undo:hover{background:#FFF8EE;color:var(--ink);transform:translateY(-1px);}
+
+/* R-07 状态栏 */
+.statusbar{
+  height:34px;display:flex;align-items:center;gap:9px;
+  padding:0 16px;background:#FFF4E4;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--ink-2);
+}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 auto;}
+.dot.busy{background:var(--orange);animation:pulse 1s infinite;}
+.dot.bad{background:var(--bad);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.prog{flex:1 1 auto;max-width:280px;height:6px;background:#EFE2D0;border-radius:3px;overflow:hidden;}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange-deep));transition:width .18s;}
+
+/* ============================================================
+   SCR-02 撤销 / 历史页
+   ============================================================ */
+.view{display:none;}
+.view.on{display:flex;}
+#view-history{flex-direction:column;padding:14px;gap:12px;min-height:566px;}
+.hist-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.hist-hd h2{font-size:15px;margin:0;}
+.hist-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1 1 auto;}
+.hist-card{
+  display:flex;align-items:center;gap:14px;
+  padding:13px 16px;border-radius:13px;background:#fff;
+  box-shadow:0 2px 10px rgba(180,120,60,.1);
+  border-left:4px solid var(--orange);
+}
+.hist-card.undone{border-left-color:#DED3C4;background:#FCFAF6;}
+.hist-card.undone .hc-t,.hist-card.undone .hc-eg{opacity:.5;}
+.hc-main{flex:1 1 auto;min-width:0;}
+.hc-t{font-size:13px;font-weight:700;margin-bottom:4px;}
+.hc-t .tag{
+  font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;
+  background:rgba(76,175,125,.14);color:var(--ok);margin-left:8px;vertical-align:1px;
+}
+.hist-card.undone .tag{background:#F0EBE3;color:#A99C8B;}
+.hc-eg{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hc-rule{font-size:11.5px;color:var(--orange-dark);background:rgba(245,166,35,.12);padding:2px 8px;border-radius:6px;}
+
+/* ============================================================
+   弹窗 SCR-03 / SCR-04 / SCR-05
+   ============================================================ */
+.mask{
+  position:fixed;inset:0;background:rgba(58,42,32,.42);
+  display:flex;align-items:center;justify-content:center;z-index:50;
+  padding:24px;backdrop-filter:blur(2px);
+}
+.mask.hide{display:none;}
+.modal{
+  background:#fff;border-radius:18px;box-shadow:var(--shadow-lg);
+  width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;
+  overflow:hidden;animation:pop .22s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.md-hd{padding:16px 20px 12px;border-bottom:1px solid var(--line);}
+.md-hd h3{margin:0;font-size:15.5px;}
+.md-hd p{margin:5px 0 0;font-size:12px;color:var(--ink-3);line-height:1.6;}
+.md-bd{padding:14px 20px;overflow-y:auto;font-size:12.5px;}
+.md-ft{padding:13px 20px 16px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line);}
+.summary{display:flex;gap:8px;margin-bottom:14px;}
+.sum-card{
+  flex:1;border-radius:11px;padding:11px 12px;text-align:center;background:#FBF7F1;
+}
+.sum-card b{display:block;font-size:20px;line-height:1.3;}
+.sum-card span{font-size:11px;color:var(--ink-3);}
+.sum-card.ok b{color:var(--ok);}
+.sum-card.skip b{color:var(--warn);}
+.sum-card.fail b{color:var(--bad);}
+.sec-t{font-size:12px;font-weight:700;color:var(--ink-2);margin:14px 0 7px;}
+.sec-t:first-child{margin-top:0;}
+.fail-item{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:8px 10px;border-radius:9px;background:rgba(229,84,75,.06);
+  margin-bottom:6px;font-size:11.5px;line-height:1.6;
+}
+.fail-item .rn{color:var(--bad);font-weight:700;flex:0 0 auto;}
+.fail-item .rr{color:var(--ink-3);}
+.ok-item{padding:6px 2px;font-size:11.5px;color:var(--ink-2);}
+.ok-item .hl2{color:var(--orange-dark);font-weight:700;}
+
+/* ============================================================
+   拖拽蒙层
+   ============================================================ */
+.veil{
+  position:absolute;inset:0;z-index:30;
+  background:rgba(255,246,232,.9);
+  border:3px dashed var(--orange);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  font-size:15px;font-weight:700;color:var(--orange-dark);
+  pointer-events:none;
+}
+.veil.hide{display:none;}
+.veil small{font-size:12px;font-weight:400;color:var(--ink-3);}
+
+/* ============================================================
+   演示控制台（非产品界面）
+   ============================================================ */
+.console{
+  margin-top:18px;background:rgba(255,255,255,.72);
+  border:1.5px dashed rgba(224,139,51,.5);
+  border-radius:16px;padding:14px 16px;
+}
+.console h4{
+  margin:0 0 4px;font-size:12.5px;color:var(--orange-dark);letter-spacing:.4px;
+}
+.console .sub{font-size:11px;color:var(--ink-3);margin-bottom:11px;}
+.cgroup{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:9px;}
+.cgroup:last-child{margin-bottom:0;}
+.cgroup>.lbl{font-size:11px;color:var(--ink-3);flex:0 0 74px;}
+.cbtn{
+  border:1.5px solid rgba(224,139,51,.4);background:#fff;color:var(--ink-2);
+  font-family:inherit;font-size:11.5px;font-weight:700;
+  padding:6px 11px;border-radius:8px;cursor:pointer;transition:all .15s;
+}
+.cbtn:hover{background:#FFF4E4;border-color:var(--orange);color:var(--orange-dark);}
+.cbtn.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+
+/* ============================================================
+   猫 · 动画
+   ============================================================ */
+#fur{transform-box:view-box;transform-origin:160px 126px;transition:transform .28s cubic-bezier(.34,1.5,.64,1);}
+#headGroup{transform-box:view-box;transform-origin:160px 190px;transition:transform .3s ease;}
+#ears{transform-box:view-box;transform-origin:160px 130px;transition:transform .3s cubic-bezier(.34,1.5,.64,1);}
+#tail{transform-box:view-box;transform-origin:236px 240px;transition:transform .3s ease;}
+#pawL,#pawR{transform-box:view-box;transition:transform .3s ease;}
+#eyeGroups>g{display:none;}
+#mouthGroups>g{display:none;}
+#accGroups>g{display:none;}
+
+/* 待机 */
+.st-idle #eyes-idle,.st-receive #eyes-idle,.st-idle #mouth-idle,.st-receive #mouth-idle{display:block;}
+.st-idle #eyes-idle{animation:blink 4.6s infinite;}
+@keyframes blink{
+  0%,91%,100%{transform:scaleY(1)}
+  94%{transform:scaleY(.1)}
+}
+.st-idle #tail{animation:tailSway 3.4s ease-in-out infinite;}
+@keyframes tailSway{0%,100%{transform:rotate(0)}50%{transform:rotate(-8deg)}}
+.st-idle #ears{animation:earTwitch 5s ease-in-out infinite;}
+@keyframes earTwitch{0%,88%,100%{transform:rotate(0)}92%{transform:rotate(-3deg)}}
+
+/* 接收文件：飞机耳 + 歪头 */
+.st-receive #eyes-idle,.st-receive #mouth-idle{display:block;}
+.st-receive #headGroup{transform:rotate(-6deg);}
+.st-receive #ears{transform:rotate(0) scale(1);}
+.st-receive #earL{transform-box:view-box;transform-origin:112px 78px;transform:rotate(-58deg);transition:transform .3s cubic-bezier(.34,1.5,.64,1);}
+.st-receive #earR{transform-box:view-box;transform-origin:208px 78px;transform:rotate(58deg);transition:transform .3s cubic-bezier(.34,1.5,.64,1);}
+.st-receive #tail{animation:tailFast 1s ease-in-out infinite;}
+@keyframes tailFast{0%,100%{transform:rotate(0)}50%{transform:rotate(-16deg)}}
+
+/* 改名中：一口一口咬掉旧名字（ST-03 · v1.1 重做）
+   旧版为「双爪上下抽动 + 身体抖动」，视觉有歧义，已废弃 */
+.st-busy #eyes-busy,.st-busy #mouth-busy{display:block;}
+.st-busy #headGroup{animation:biteLunge 1.6s ease-in-out infinite;}
+@keyframes biteLunge{
+  0%,30%{transform:rotate(0deg) translate(0,0);}
+  42%{transform:rotate(2deg) translate(5px,7px);}
+  58%{transform:rotate(0deg) translate(0,0);}
+  100%{transform:rotate(0deg) translate(0,0);}
+}
+#mouth-busy{transform-box:fill-box;transform-origin:center;}
+.st-busy #mouth-busy{animation:chomp 1.6s ease-in-out infinite;}
+@keyframes chomp{
+  0%,32%{transform:scaleY(1);}
+  41%{transform:scaleY(.12);}
+  52%,100%{transform:scaleY(1);}
+}
+.st-busy #tail{animation:tailFast .6s ease-in-out infinite;}
+
+/* 成功 */
+.st-happy #eyes-happy,.st-happy #mouth-happy,.st-happy #acc-spark{display:block;}
+.st-happy #headGroup{transform:rotate(4deg) translateY(-3px);}
+.st-happy #tail{animation:tailUp 1.6s ease-in-out infinite;}
+@keyframes tailUp{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(-30deg)}}
+.st-happy #acc-spark{display:block;}
+.st-happy #acc-spark .sp{animation:spark 1.1s ease-in-out infinite;}
+.st-happy #acc-spark g:nth-child(2) .sp{animation-delay:.3s;}
+.st-happy #acc-spark g:nth-child(3) .sp{animation-delay:.6s;}
+@keyframes spark{0%,100%{opacity:.25;transform:scale(.75)}50%{opacity:1;transform:scale(1.15)}}
+#acc-spark .sp{transform-box:fill-box;transform-origin:center;}
+
+/* 失败：炸毛 + 哈气 */
+.st-angry #eyes-angry,.st-angry #mouth-angry,.st-angry #acc-angry{display:block;}
+.st-angry #fur{transform:scale(1.16);}
+.st-angry #catRoot{animation:tremble .1s linear infinite;}
+@keyframes tremble{0%{transform:translate(-1px,0)}50%{transform:translate(1px,0)}100%{transform:translate(-1px,0)}}
+.st-angry #headGroup{transform:rotate(-2deg);}
+.st-angry #acc-angry .huff{animation:huff .7s ease-in-out infinite;}
+.st-angry #acc-angry .huff:nth-child(2){animation-delay:.18s;}
+.st-angry #acc-angry .huff:nth-child(3){animation-delay:.36s;}
+@keyframes huff{0%,100%{opacity:.35}50%{opacity:1}}
+.st-angry #tail{transform:rotate(14deg);}
+#acc-sweat{display:none;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-hd">
+    <h1>耄耋改名 · 可点击原型 <span style="color:#8A8178;font-weight:400;font-size:13px">v1.1</span></h1>
+    <p>对应文档：<code>PRD.md v1.1</code> · <code>交互说明文档.md v1.1</code>　｜　界面元素 id 与交互文档 <code>EL-xxx</code> 编号一一对应。<strong>原型里的橘猫是占位形象（不是最终美术），重点是动作与状态设计。</strong>页面底部是演示控制台（不属于产品界面），点「ST-03 改名中」可以看到新的咬名字动画。</p>
+  </div>
+
+  <!-- ===================== SCR-01 主窗口 ===================== -->
+  <div class="win" id="EL-win">
+    <!-- R-01 标题栏 -->
+    <div class="titlebar" id="R-01">
+      <div class="tb-left"><span class="cat-mini"></span>耄耋改名</div>
+      <div class="tb-right">
+        <button class="tbtn" title="最小化">&#8211;</button>
+        <button class="tbtn" title="最大化">&#9723;</button>
+        <button class="tbtn close" title="关闭">&#10005;</button>
+      </div>
+    </div>
+
+    <div class="win-body">
+
+      <!-- ---------- 主视图 ---------- -->
+      <div class="view on" id="view-main">
+
+        <!-- 左栏 -->
+        <aside class="col-left">
+          <!-- R-02 形象区 -->
+          <div class="r-cat" id="R-02">
+            <div class="cat-wrap st-idle" id="EL-010">
+              <svg id="catRoot" viewBox="0 0 320 300" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <radialGradient id="furGrad" cx="45%" cy="34%" r="72%">
+                    <stop offset="0%" stop-color="#FFD79A"/>
+                    <stop offset="62%" stop-color="#F8B457"/>
+                    <stop offset="100%" stop-color="#EE9A32"/>
+                  </radialGradient>
+                  <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#FFDCA6"/>
+                    <stop offset="100%" stop-color="#EFA554"/>
+                  </linearGradient>
+                  <linearGradient id="tailGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#EFA554"/>
+                    <stop offset="100%" stop-color="#F8B457"/>
+                  </linearGradient>
+                  <radialGradient id="cheekGrad">
+                    <stop offset="0%" stop-color="#FF9A86" stop-opacity=".6"/>
+                    <stop offset="100%" stop-color="#FF9A86" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+
+                <g id="fur"></g>
+
+                <g id="tail">
+                  <path d="M232,240 C288,250 302,196 266,168" fill="none" stroke="url(#tailGrad)"
+                        stroke-width="19" stroke-linecap="round"/>
+                  <path d="M232,240 C288,250 302,196 266,168" fill="none" stroke="#E08B33"
+                        stroke-width="19" stroke-linecap="round" stroke-dasharray="9 24" opacity=".45"/>
+                </g>
+
+                <g id="body">
+                  <ellipse cx="160" cy="232" rx="77" ry="53" fill="url(#bodyGrad)"/>
+                  <ellipse cx="160" cy="243" rx="46" ry="33" fill="#FFF3E0" opacity=".8"/>
+                  <g id="pawL"><ellipse cx="132" cy="272" rx="23" ry="13" fill="#FFDCA6"/>
+                    <path d="M124,272 h16 M132,272 v8" stroke="#E7A85E" stroke-width="1.6" opacity=".6"/></g>
+                  <g id="pawR"><ellipse cx="188" cy="272" rx="23" ry="13" fill="#FFDCA6"/>
+                    <path d="M180,272 h16 M188,272 v8" stroke="#E7A85E" stroke-width="1.6" opacity=".6"/></g>
+                </g>
+
+                <g id="headGroup">
+                  <g id="ears">
+                    <g id="earL">
+                      <polygon points="96,76 82,22 140,54" fill="url(#furGrad)"/>
+                      <polygon points="103,70 95,40 127,57" fill="#FFB9A8"/>
+                    </g>
+                    <g id="earR">
+                      <polygon points="224,76 238,22 180,54" fill="url(#furGrad)"/>
+                      <polygon points="217,70 225,40 193,57" fill="#FFB9A8"/>
+                    </g>
+                  </g>
+
+                  <circle cx="160" cy="126" r="76" fill="url(#furGrad)"/>
+                  <path d="M138,58 v20 M160,52 v24 M182,58 v20" stroke="#E08B33" stroke-width="5"
+                        stroke-linecap="round" opacity=".55"/>
+                  <ellipse cx="114" cy="150" rx="20" ry="13" fill="url(#cheekGrad)"/>
+                  <ellipse cx="206" cy="150" rx="20" ry="13" fill="url(#cheekGrad)"/>
+                  <ellipse cx="160" cy="157" rx="35" ry="24" fill="#FFF6E8" opacity=".85"/>
+
+                  <!-- 眼睛 -->
+                  <g id="eyeGroups">
+                    <g id="eyes-idle">
+                      <ellipse cx="132" cy="124" rx="10" ry="12.5" fill="#3B2A20"/>
+                      <circle cx="128.5" cy="119" r="3.6" fill="#fff"/>
+                      <circle cx="135" cy="129" r="1.8" fill="#fff" opacity=".8"/>
+                      <ellipse cx="188" cy="124" rx="10" ry="12.5" fill="#3B2A20"/>
+                      <circle cx="184.5" cy="119" r="3.6" fill="#fff"/>
+                      <circle cx="191" cy="129" r="1.8" fill="#fff" opacity=".8"/>
+                    </g>
+                    <g id="eyes-happy">
+                      <path d="M120,127 q12,-14 24,0" fill="none" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/>
+                      <path d="M176,127 q12,-14 24,0" fill="none" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/>
+                    </g>
+                    <g id="eyes-busy">
+                      <path d="M120,119 q12,12 24,0" fill="none" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/>
+                      <path d="M176,119 q12,12 24,0" fill="none" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/>
+                      <circle cx="132" cy="126" r="4" fill="#3B2A20"/>
+                      <circle cx="188" cy="126" r="4" fill="#3B2A20"/>
+                    </g>
+                    <g id="eyes-angry">
+                      <path d="M119,113 L145,131" stroke="#3B2A20" stroke-width="5.5" stroke-linecap="round"/>
+                      <path d="M201,113 L175,131" stroke="#3B2A20" stroke-width="5.5" stroke-linecap="round"/>
+                      <ellipse cx="133" cy="132" rx="5" ry="5.5" fill="#3B2A20"/>
+                      <ellipse cx="187" cy="132" rx="5" ry="5.5" fill="#3B2A20"/>
+                      <circle cx="131" cy="130" r="2" fill="#fff"/>
+                      <circle cx="185" cy="130" r="2" fill="#fff"/>
+                    </g>
+                  </g>
+
+                  <!-- 鼻子 -->
+                  <polygon points="153,141 167,141 160,150" fill="#E0806E"/>
+
+                  <!-- 嘴 -->
+                  <g id="mouthGroups">
+                    <g id="mouth-idle">
+                      <path d="M160,150 v6" stroke="#C98A72" stroke-width="2.4" stroke-linecap="round"/>
+                      <path d="M146,156 q7,7 14,0 q7,7 14,0" fill="none" stroke="#C98A72"
+                            stroke-width="2.6" stroke-linecap="round"/>
+                    </g>
+                    <g id="mouth-happy">
+                      <path d="M141,153 q19,21 38,0 z" fill="#8A3A3A"/>
+                      <ellipse cx="160" cy="168" rx="9" ry="5" fill="#FF8C8C"/>
+                    </g>
+                    <g id="mouth-busy">
+                      <ellipse cx="160" cy="163" rx="9.5" ry="8.5" fill="#8A3A3A"/>
+                      <ellipse cx="160" cy="167" rx="5.5" ry="3.5" fill="#FF8C8C"/>
+                    </g>
+                    <g id="mouth-angry">
+                      <path d="M136,151 q24,28 48,0 z" fill="#7A2F2F"/>
+                      <polygon points="143,151 151,161 159,151" fill="#fff"/>
+                      <polygon points="161,151 169,161 177,151" fill="#fff"/>
+                    </g>
+                  </g>
+
+                  <!-- 胡须 -->
+                  <g stroke="#D9BFA2" stroke-width="2" stroke-linecap="round" opacity=".85">
+                    <path d="M120,146 L80,138"/><path d="M118,154 L76,155"/><path d="M120,163 L82,173"/>
+                    <path d="M200,146 L240,138"/><path d="M202,154 L244,155"/><path d="M200,163 L238,173"/>
+                  </g>
+
+                  <!-- 附加物 -->
+                  <g id="accGroups">
+                    <g id="acc-sweat">
+                      <path d="M240,84 C250,98 250,108 240,108 C230,108 230,98 240,84 Z" fill="#7FC8F8"/>
+                      <ellipse cx="236" cy="101" rx="2.6" ry="3.6" fill="#fff" opacity=".75"/>
+                    </g>
+                    <g id="acc-angry">
+                      <g stroke="#E5544B" stroke-width="5" stroke-linecap="round">
+                        <path d="M228,56 v20 M244,56 v20"/>
+                        <path d="M220,62 h32 M220,72 h32"/>
+                      </g>
+                      <path class="huff" d="M208,148 q14,-9 28,-4" fill="none" stroke="#C9A98C" stroke-width="3" stroke-linecap="round"/>
+                      <path class="huff" d="M212,160 q16,2 30,-2" fill="none" stroke="#C9A98C" stroke-width="3" stroke-linecap="round"/>
+                      <path class="huff" d="M208,172 q14,9 28,4" fill="none" stroke="#C9A98C" stroke-width="3" stroke-linecap="round"/>
+                    </g>
+                    <g id="acc-spark">
+                      <g transform="translate(64,72)"><path class="sp" d="M0,-11 L2.6,-2.6 L11,0 L2.6,2.6 L0,11 L-2.6,2.6 L-11,0 L-2.6,-2.6 Z" fill="#FFD166"/></g>
+                      <g transform="translate(258,116)"><path class="sp" d="M0,-9 L2.2,-2.2 L9,0 L2.2,2.2 L0,9 L-2.2,2.2 L-9,0 L-2.2,-2.2 Z" fill="#FFC078"/></g>
+                      <g transform="translate(88,208)"><path class="sp" d="M0,-8 L2,-2 L8,0 L2,2 L0,8 L-2,2 L-8,0 L-2,-2 Z" fill="#FFD166"/></g>
+                    </g>
+                  </g>
+                </g>
+              </svg>
+
+              <!-- ST-03 咬名字动画（EL-013 ~ EL-017） -->
+              <div class="bite-lane" id="EL-013">
+                <div class="chip" id="EL-014">
+                  <span class="ci" id="EL-015"></span>
+                  <span class="names">
+                    <span class="cn old" id="EL-016"></span>
+                    <span class="cn new" id="EL-017"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="cat-status" id="EL-011">待机中…</div>
+          </div>
+
+          <!-- R-03 操作区 -->
+          <div class="r-ops" id="R-03">
+            <button class="btn btn-soft" id="EL-020" data-act="addfile">添加文件</button>
+            <button class="btn btn-soft" id="EL-021" data-act="addfolder">添加文件夹</button>
+            <button class="btn btn-ghost" id="EL-022" data-act="clear">清空列表</button>
+            <div class="hint">也可以直接把文件拖进窗口哦</div>
+          </div>
+        </aside>
+
+        <!-- 右栏 -->
+        <main class="col-right">
+
+          <!-- R-04 列表区 -->
+          <section class="region r-list" id="R-04">
+            <div class="region-hd">
+              <span id="EL-030">共 0 项</span>
+              <span class="muted" style="font-size:11.5px">原名 → 新名预览</span>
+              <label class="chk" id="EL-031"><input type="checkbox" id="selAll"> 全选</label>
+            </div>
+            <div class="list" id="EL-032"></div>
+            <div class="empty" id="EL-037">
+              <div class="paw">&#128062;</div>
+              <div>把文件拖进来，或者点左边的按钮</div>
+            </div>
+          </section>
+
+          <!-- R-05 规则区 -->
+          <section class="region r-rule" id="R-05">
+            <div class="tabs" id="EL-040">
+              <button class="tab on" data-mode="delete"><span class="dot"></span>删除字符</button>
+              <button class="tab" data-mode="replace"><span class="dot"></span>替换字符</button>
+              <button class="tab" data-mode="rule"><span class="dot"></span>规则化</button>
+            </div>
+
+            <div class="pane on" id="pane-delete">
+              <div class="frow">
+                <label>删除这些字：</label>
+                <input type="text" class="grow" id="EL-041" placeholder="例如：【某某公众号】">
+              </div>
+            </div>
+
+            <div class="pane" id="pane-replace">
+              <div class="frow">
+                <label>查找：</label>
+                <input type="text" class="grow" id="EL-042" placeholder="例如：最终版">
+                <label>替换为：</label>
+                <input type="text" class="grow" id="EL-043" placeholder="例如：定稿（可留空）">
+              </div>
+            </div>
+
+            <div class="pane" id="pane-rule">
+              <div class="frow">
+                <label>前缀：</label>
+                <input type="text" class="grow" id="EL-045" placeholder="支持 {d} 日期 / {n} 序号">
+                <label>后缀：</label>
+                <input type="text" class="grow" id="EL-046" placeholder="加在扩展名前">
+              </div>
+              <div class="frow">
+                <label class="chk"><input type="checkbox" id="EL-047"> 启用序号</label>
+                <label>起始</label><input type="number" class="w70" id="EL-048" value="1" min="0">
+                <label>步长</label><input type="number" class="w70" id="EL-049" value="1" min="1">
+                <label>补零</label><input type="number" class="w70" id="EL-050" value="3" min="0" max="6">
+                <select id="EL-054"><option value="suffix">排在最后</option><option value="prefix">排在最前</option></select>
+              </div>
+              <div class="frow">
+                <label class="chk"><input type="checkbox" id="EL-051"> 启用日期</label>
+                <select id="EL-052">
+                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                  <option value="YYYYMMDD">YYYYMMDD</option>
+                  <option value="YYYY年MM月DD日">YYYY年MM月DD日</option>
+                </select>
+                <label class="chk"><input type="checkbox" id="EL-053" checked> 保留原文件名</label>
+              </div>
+              <p class="tip">规则化页签内的<b>前缀 / 序号 / 日期 / 后缀可同时生效</b>；取消「保留原文件名」即得到 <b>2026-09-11-发票-001.JPG</b> 这类全新命名。</p>
+            </div>
+
+            <div class="rowline">
+              <label class="chk" id="EL-044"><input type="checkbox" id="caseSensitive"> 区分大小写</label>
+              <label class="chk" id="EL-055"><input type="checkbox" id="autoConflict"> 自动处理重名冲突（默认关闭）</label>
+            </div>
+          </section>
+
+          <!-- R-06 动作区 -->
+          <div class="r-actions" id="R-06">
+            <button class="btn btn-primary" id="EL-060" disabled>开始改名</button>
+            <button class="btn btn-undo" id="EL-061">撤销</button>
+          </div>
+        </main>
+      </div>
+
+      <!-- ---------- SCR-02 撤销 / 历史页 ---------- -->
+      <div class="view" id="view-history">
+        <div class="hist-hd">
+          <h2 id="EL-080-t">撤销 / 历史</h2>
+          <div style="display:flex;gap:9px">
+            <button class="btn btn-soft" style="padding:8px 14px;font-size:12.5px" id="EL-083">全部撤销</button>
+            <button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" id="EL-080">返回主界面</button>
+          </div>
+        </div>
+        <div class="hist-list" id="EL-081"></div>
+      </div>
+    </div>
+
+    <!-- R-07 状态栏 -->
+    <div class="statusbar" id="R-07">
+      <span class="dot" id="EL-070"></span>
+      <span id="EL-071">就绪</span>
+      <div class="prog hide" id="EL-072" style="display:none"><i></i></div>
+    </div>
+
+    <!-- 拖拽蒙层 -->
+    <div class="veil hide" id="EL-012">
+      <div>松手就能加进来～</div>
+      <small>支持文件与文件夹（文件夹只加它自己，不展开）</small>
+    </div>
+  </div>
+
+  <!-- ===================== 演示控制台（非产品界面） ===================== -->
+  <div class="console">
+    <h4>演示控制台 · 不属于产品界面</h4>
+    <div class="sub">用来手动切换耄耋状态、查看弹窗。真实产品中这些状态由操作自动触发。</div>
+
+    <div class="cgroup">
+      <span class="lbl">耄耋状态</span>
+      <button class="cbtn on" data-st="ST-01">ST-01 待机</button>
+      <button class="cbtn" data-st="ST-02">ST-02 接收文件</button>
+      <button class="cbtn" data-st="ST-03">ST-03 改名中</button>
+      <button class="cbtn" data-st="ST-04">ST-04 成功</button>
+      <button class="cbtn" data-st="ST-05">ST-05 失败</button>
+    </div>
+
+    <div class="cgroup">
+      <span class="lbl">弹窗预览</span>
+      <button class="cbtn" data-mo="result">SCR-03 结果弹窗</button>
+      <button class="cbtn" data-mo="conflict">SCR-04 冲突提示</button>
+      <button class="cbtn" data-mo="confirm">SCR-05 二次确认</button>
+      <button class="cbtn" data-mo="undo">撤销确认</button>
+    </div>
+
+    <div class="cgroup">
+      <span class="lbl">场景预设</span>
+      <button class="cbtn" data-sc="1">场景1 去掉广告前缀</button>
+      <button class="cbtn" data-sc="2">场景2 制造一个重名冲突</button>
+      <button class="cbtn" data-sc="3">场景3 发票归档重命名</button>
+      <button class="cbtn" data-sc="reset">重置列表</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗容器 -->
+<div class="mask hide" id="EL-900"><div class="modal" id="EL-901"></div></div>
+
+<script>
+/* ============================================================
+   0. 工具
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/* ============================================================
+   1. 炸毛（JS 生成，便于统一缩放的「炸毛」效果）
+   ============================================================ */
+(function buildFur(){
+  const CX = 160, CY = 126, RT = 70, N = 24;
+  let html = '';
+  for(let i = 0; i < N; i++){
+    const a  = -Math.PI + (i / N) * Math.PI * 2;
+    const a1 = a - 0.058, a2 = a + 0.058;
+    const len = (i % 2 === 0) ? 21 : 12;
+    const p = (ang, r) => [(CX + Math.cos(ang) * r).toFixed(1), (CY + Math.sin(ang) * r).toFixed(1)].join(',');
+    html += `<polygon points="${p(a1,RT)} ${p(a2,RT)} ${p(a,RT+len)}" fill="${i%2===0?'#F7B250':'#EF9C33'}"/>`;
+  }
+  $('fur').innerHTML = html;
+})();
+
+/* ============================================================
+   2. 全局状态
+   ============================================================ */
+const S = {
+  dir: 'D:\\下载',
+  files: [],
+  rule: {
+    mode: 'delete',
+    caseSensitive: false,
+    autoConflict: false,
+    delete:  { text: '' },
+    replace: { find: '', to: '' },
+    rule: {
+      prefix: '', suffix: '',
+      seqEnabled: false, seqStart: 1, seqStep: 1, seqPad: 3, seqPosition: 'suffix',
+      dateEnabled: false, dateFormat: 'YYYY-MM-DD',
+      keepOriginal: true
+    }
+  },
+  history: [],
+  catState: 'ST-01',
+  running: false,
+  seq: 0
+};
+
+const SAMPLE = [
+  '【某某公众号】高等数学-上册课件.pdf',
+  '【某某公众号】线性代数课件.pdf',
+  'abc广告.txt',
+  '会议纪要-最终版-最终版.docx',
+  'IMG_0023.JPG',
+  'IMG_0023(1).JPG',
+  'Screenshot_2026-09-01_乱七八糟.png',
+  '下载(1).zip',
+  '爱因塔模型说明书.pdf',
+  '手机照片备份',
+  '旧版资料',
+  '未命名文件(3).docx'
+];
+const DIR_FLAGS = { '手机照片备份': 1, '旧版资料': 1 };
+
+/* ============================================================
+   3. 名称拆分：扩展名保护逻辑（见 PRD EX-07）
+   ============================================================ */
+function splitName(name, isDir){
+  if(isDir) return { stem: name, ext: '' };
+  const i = name.lastIndexOf('.');
+  if(i <= 0) return { stem: name, ext: '' };   // README / .gitignore → 整体视为主体
+  return { stem: name.slice(0, i), ext: name.slice(i) };
+}
+
+/* ============================================================
+   4. 规则引擎（见 PRD §4.2）
+   ============================================================ */
+function fmtDate(fmt){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return fmt === 'YYYYMMDD' ? ('' + y + m + day)
+       : fmt === 'YYYY年MM月DD日' ? (y + '年' + m + '月' + day + '日')
+       : (y + '-' + m + '-' + day);
+}
+
+function applyRule(stem, idx){
+  const r = S.rule;
+
+  if(r.mode === 'delete'){
+    if(!r.delete.text) return stem;
+    return stem.replace(new RegExp(escRe(r.delete.text), r.caseSensitive ? 'g' : 'gi'), '');
+  }
+
+  if(r.mode === 'replace'){
+    if(!r.replace.find) return stem;
+    return stem.replace(new RegExp(escRe(r.replace.find), r.caseSensitive ? 'g' : 'gi'), r.replace.to);
+  }
+
+  /* 规则化模式 */
+  const rr = r.rule;
+  const seq  = rr.seqEnabled ? String(rr.seqStart + idx * rr.seqStep).padStart(rr.seqPad, '0') : '';
+  const date = rr.dateEnabled ? fmtDate(rr.dateFormat) : '';
+
+  const rawPre = rr.prefix, rawSuf = rr.suffix;
+  const seqInVars  = /\{n\}/.test(rawPre + rawSuf);
+  const dateInVars = /\{d\}/.test(rawPre + rawSuf);
+  const fill = t => t.replace(/\{n\}/g, seq).replace(/\{d\}/g, date);
+
+  const pre  = fill(rawPre);
+  const suf  = fill(rawSuf);
+  const seqP  = (rr.seqEnabled  && !seqInVars)  ? seq  : '';
+  const dateP = (rr.dateEnabled && !dateInVars) ? date : '';
+  const core  = rr.keepOriginal ? stem : '';
+
+  if(!rr.seqEnabled && !rr.dateEnabled && !rawPre && !rawSuf) return stem;
+
+  return rr.seqPosition === 'prefix'
+    ? pre + seqP + dateP + core + suf
+    : pre + dateP + core + suf + seqP;
+}
+
+/* ============================================================
+   5. 差异高亮
+   ============================================================ */
+function norm(s){ return S.rule.caseSensitive ? s : s.toLowerCase(); }
+function diffParts(a, b){
+  const na = norm(a), nb = norm(b);
+  let p = 0;
+  while(p < na.length && p < nb.length && na[p] === nb[p]) p++;
+  let s = 0;
+  while(s < na.length - p && s < nb.length - p && na[na.length-1-s] === nb[nb.length-1-s]) s++;
+  return { aPre: a.slice(0,p), aMid: a.slice(p, a.length - s), aSuf: a.slice(a.length - s),
+           bPre: b.slice(0,p), bMid: b.slice(p, b.length - s), bSuf: b.slice(b.length - s) };
+}
+
+/* ============================================================
+   6. 重新计算预览（F-08）
+   ============================================================ */
+function recompute(){
+  S.files.forEach((f, i) => {
+    const stemOut = applyRule(f.stem, i);
+    const nameOut = stemOut + f.ext;
+    f.newName = nameOut;
+    f.newStem = stemOut;
+    f.reason = '';
+
+    if(nameOut === f.name){
+      f.status = 'unchanged';
+    } else if(!stemOut.trim()){
+      f.status = 'invalid'; f.reason = '改完名字就空了';
+    } else if(/[\\/:*?"<>|]/.test(stemOut)){
+      f.status = 'invalid'; f.reason = '含非法字符';
+    } else if((S.dir + '\\' + nameOut).length > 259){
+      f.status = 'invalid'; f.reason = '路径过长';
+    } else {
+      f.status = 'changed';
+    }
+  });
+
+  /* 冲突检测：批次内重名（EX-05） */
+  const bucket = {};
+  S.files.forEach(f => {
+    if(f.status !== 'changed') return;
+    const k = norm(f.newName);
+    (bucket[k] = bucket[k] || []).push(f);
+  });
+  Object.values(bucket).forEach(g => {
+    if(g.length > 1) g.forEach(f => { f.status = 'conflict'; f.reason = '批次内重名'; });
+  });
+
+  /* 冲突检测：与磁盘已有文件重名（EX-06，模拟同一目录） */
+  const others = new Set(S.files.map(f => norm(f.name)));
+  S.files.forEach(f => {
+    if(f.status !== 'changed') return;
+    const self = norm(f.name);
+    const target = norm(f.newName);
+    if(target === self) return;
+    if(others.has(target)){ f.status = 'conflict'; f.reason = '已经有同名文件了'; }
+  });
+
+  render();
+}
+
+/* ============================================================
+   7. 渲染
+   ============================================================ */
+function render(){
+  const list = $('EL-032'), empty = $('EL-037');
+
+  /* 列表（R-04） */
+  if(!S.files.length){
+    list.innerHTML = ''; empty.style.display = 'flex';
+  }else{
+    empty.style.display = 'none';
+    list.innerHTML = S.files.map((f, i) => {
+      const d = diffParts(f.name, f.newName);
+      const unchanged = f.status === 'unchanged';
+      const oldHtml = unchanged
+        ? esc(f.name)
+        : esc(d.aPre) + (d.aMid ? `<span class="del">${esc(d.aMid)}</span>` : '') + esc(d.aSuf);
+      const newHtml = unchanged
+        ? `<span style="color:#B9AC9D">${esc(f.newName)}</span>`
+        : esc(d.bPre) + (d.bMid ? `<span class="hl">${esc(d.bMid)}</span>` : '') + esc(d.bSuf);
+      const badge = unchanged
+        ? '<span class="badge none">未变</span>'
+        : `<span class="badge ${f.status === 'changed' ? 'ok' : 'bad'}">${
+            f.status === 'conflict' ? '重名' : f.status === 'invalid' ? '非法' : '将改'}</span>`;
+      return `<div class="row ${f.status === 'conflict' ? 'is-conflict' : ''} ${f.status === 'invalid' ? 'is-invalid' : ''}">
+        <div class="idx">${i + 1}</div>
+        <div class="nm old ${f.isDir ? 'dir' : ''}" title="${esc(f.name)}">${f.isDir ? '&#128193; ' : ''}${oldHtml}</div>
+        <div class="arrow">&#8594;</div>
+        <div class="nm new" title="${esc(f.newName)}">${newHtml}</div>
+        <div>${badge}</div>
+        <button class="xbtn" data-del="${f.id}" title="移除此项">&#10005;</button>
+      </div>`;
+    }).join('');
+  }
+
+  /* 头部统计 EL-030 */
+  const nChange  = S.files.filter(f => f.status === 'changed').length;
+  const nConflict= S.files.filter(f => f.status === 'conflict').length;
+  const nInvalid = S.files.filter(f => f.status === 'invalid').length;
+  $('EL-030').textContent = `共 ${S.files.length} 项`;
+
+  /* 状态栏 R-07 */
+  const dot = $('EL-070');
+  dot.className = 'dot' + (S.running ? ' busy' : (nConflict || nInvalid) ? ' bad' : '');
+  if(!S.running){
+    const parts = [`共 ${S.files.length} 项`];
+    parts.push(nChange ? `预览 ${nChange} 项将发生变化` : '当前规则不会改变任何名字');
+    if(nConflict) parts.push(`${nConflict} 项重名冲突（默认跳过，不会覆盖）`);
+    if(nInvalid)  parts.push(`${nInvalid} 项名称非法`);
+    $('EL-071').textContent = (S.files.length ? '' : '就绪 · ') + parts.join(' · ');
+  }
+
+  /* 主按钮 EL-060 */
+  const runnable = !S.running && (nChange + nConflict) > 0 && S.files.length > 0;
+  $('EL-060').disabled = !runnable;
+  $('EL-060').textContent = S.running ? '取消' : '开始改名';
+
+  renderHistory();
+}
+
+/* ============================================================
+   7.5 ST-03「一口一口咬掉旧名字」动画（v1.1 新增）
+   —— 取代旧版「双爪上下抽动 + 身体抖动」（视觉有歧义）
+   —— 图标类型随批次实际内容切换：文件咬文件、文件夹咬文件夹
+   ============================================================ */
+const FILE_SVG = '<svg width="13" height="14" viewBox="0 0 13 14" aria-hidden="true">'
+  + '<path d="M1.5 1.5h6.2l3.8 3.8v7.2H1.5z" fill="#C3CFDB" stroke="#93A3B3" stroke-width="1" stroke-linejoin="round"/>'
+  + '<path d="M7.7 1.5v3.8h3.8" fill="none" stroke="#93A3B3" stroke-width="1" stroke-linejoin="round"/>'
+  + '<path d="M3.8 8.2h5.4M3.8 10.6h3.6" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>';
+const FOLDER_SVG = '<svg width="15" height="13" viewBox="0 0 15 13" aria-hidden="true">'
+  + '<path d="M1 3.1A1.6 1.6 0 0 1 2.6 1.5h3l1.4 1.7h5.4A1.6 1.6 0 0 1 14 4.8v5.6a1.6 1.6 0 0 1-1.6 1.6H2.6A1.6 1.6 0 0 1 1 10.4z" '
+  + 'fill="#F7C86E" stroke="#DFA23C" stroke-width="1" stroke-linejoin="round"/></svg>';
+
+/* 卡片上的名字太长就截断，但要保住扩展名 */
+function shortName(n, max){
+  max = max || 14;
+  if(n.length <= max) return n;
+  const i = n.lastIndexOf('.');
+  if(i > 0 && n.length - i <= 6){
+    const ext = n.slice(i);
+    return n.slice(0, max - ext.length - 1) + '…' + ext;
+  }
+  return n.slice(0, max - 1) + '…';
+}
+
+/* 列表为空时给演示用的兜底数据 */
+const DEMO_POOL = [
+  { dir:false, old:'会议纪要-最终版.docx', neu:'会议纪要-定稿.docx' },
+  { dir:false, old:'abc广告.txt',           neu:'abc.txt' },
+  { dir:true,  old:'旧版资料',              neu:'2026-09-11-旧版资料' }
+];
+
+/* 咬的队列 = 真实列表里「将发生变化 / 冲突」的项，按列表顺序取前 12 个；
+   所以文件与文件夹会按批次真实比例交替出现 */
+function buildBitePool(){
+  const hit = S.files.filter(f => f.status === 'changed' || f.status === 'conflict');
+  const src = hit.length ? hit : S.files;
+  if(!src.length) return DEMO_POOL;
+  return src.slice(0, 12).map(f => ({ dir: f.isDir, old: f.name, neu: f.newName }));
+}
+
+let biteTimer = null, biteIdx = 0;
+
+function tickBite(){
+  const pool = buildBitePool();
+  if(!pool.length) return;
+  const it = pool[biteIdx % pool.length]; biteIdx++;
+  $('EL-015').innerHTML  = it.dir ? FOLDER_SVG : FILE_SVG;
+  $('EL-016').textContent = shortName(it.old);
+  $('EL-017').textContent = shortName(it.neu);
+  const chip = $('EL-014');
+  chip.classList.remove('run');
+  void chip.offsetWidth;          /* 强制重排，让动画从头播 */
+  chip.classList.add('run');
+}
+
+function startBiteLoop(){
+  stopBiteLoop();
+  biteIdx = 0;
+  tickBite();
+  biteTimer = setInterval(tickBite, 1600);
+}
+function stopBiteLoop(){
+  if(biteTimer){ clearInterval(biteTimer); biteTimer = null; }
+  $('EL-014').classList.remove('run');
+}
+
+/* ============================================================
+   8. 耄耋状态机（F-06 · ST-01 ~ ST-05）
+   ============================================================ */
+const CAT_TEXT = {
+  'ST-01': '待机中…',
+  'ST-02': n => `收到啦，${n} 个！`,
+  'ST-03': p => `正在改名…（${p.done}/${p.total}）`,
+  'ST-04': '改好啦，得意！',
+  'ST-05': n => `炸毛了！有 ${n} 项没改成`
+};
+const CAT_CLASS = { 'ST-01':'st-idle', 'ST-02':'st-receive', 'ST-03':'st-busy', 'ST-04':'st-happy', 'ST-05':'st-angry' };
+let catTimer = null;
+function setCat(st, payload){
+  const switched = S.catState !== st;
+  S.catState = st;
+  $('EL-010').className = 'cat-wrap ' + CAT_CLASS[st];
+  /* 只在状态真正切换时启停咬名字动画，避免进度更新时反复重启 */
+  if(switched){ if(st === 'ST-03') startBiteLoop(); else stopBiteLoop(); }
+  const t = CAT_TEXT[st];
+  $('EL-011').textContent = typeof t === 'function' ? t(payload || 0) : t;
+  document.querySelectorAll('.cbtn[data-st]').forEach(b => b.classList.toggle('on', b.dataset.st === st));
+  if(catTimer) clearTimeout(catTimer);
+  if(st === 'ST-02' || st === 'ST-04' || st === 'ST-05'){
+    catTimer = setTimeout(() => { if(!S.running) setCat('ST-01'); }, st === 'ST-02' ? 1500 : 3000);
+  }
+}
+
+/* ============================================================
+   9. 文件入列
+   ============================================================ */
+function addFiles(names){
+  let added = 0, dup = 0;
+  names.forEach(n => {
+    if(S.files.some(f => f.name.toLowerCase() === n.toLowerCase())){ dup++; return; }
+    if(S.files.length >= 10000) return;
+    const isDir = !!DIR_FLAGS[n];
+    const sp = splitName(n, isDir);
+    S.files.push({ id: ++S.seq, name: n, isDir, stem: sp.stem, ext: sp.ext,
+                   newName: n, newStem: sp.stem, status: 'unchanged', reason: '' });
+    added++;
+  });
+  recompute();
+  if(added) setCat('ST-02', S.files.length);
+  if(dup) $('EL-071').textContent = `已忽略 ${dup} 个重复项`;
+  return added;
+}
+function resetList(){
+  S.files = [];
+  recompute();
+}
+
+/* ============================================================
+   10. 执行改名（MOD-4 · 两阶段 + 冲突策略）
+   ============================================================ */
+function run(){
+  if(S.running) return;
+  const changed   = S.files.filter(f => f.status === 'changed');
+  const conflicts = S.files.filter(f => f.status === 'conflict');
+  if(!changed.length && !conflicts.length) return;
+
+  if(conflicts.length && !S.rule.autoConflict){ openConflictModal(conflicts); return; }
+  const total = changed.length + (S.rule.autoConflict ? conflicts.length : 0);
+  if(total >= 10){ openConfirmModal(total, doRun); return; }
+  doRun();
+}
+
+function doRun(){
+  const auto = S.rule.autoConflict;
+  let targets = S.files.filter(f => f.status === 'changed' || (auto && f.status === 'conflict'));
+  if(!targets.length) return;
+
+  /* 「自动加序号」策略：为冲突项生成不冲突的新名 */
+  if(auto){
+    const used = new Set(S.files.filter(f => f.status === 'unchanged').map(f => f.name.toLowerCase()));
+    S.files.filter(f => f.status === 'changed').forEach(f => used.add(f.newName.toLowerCase()));
+    targets.forEach(f => {
+      if(f.status !== 'conflict') return;
+      const i = f.newName.lastIndexOf('.');
+      const base = i > 0 ? f.newName.slice(0, i) : f.newName;
+      const ext  = i > 0 ? f.newName.slice(i) : '';
+      for(let k = 1; k <= 99; k++){
+        const cand = `${base}_${k}${ext}`;
+        if(!used.has(cand.toLowerCase())){ f.newName = cand; f.newStem = base + '_' + k; used.add(cand.toLowerCase()); break; }
+      }
+    });
+  }
+
+  S.running = true; render();
+  const total = targets.length;
+  let done = 0;
+  $('EL-072').style.display = 'block';
+  setCat('ST-03', { done: 0, total });
+
+  const timer = setInterval(() => {
+    done = Math.min(done + Math.max(1, Math.ceil(total / 12)), total);
+    $('EL-072').firstElementChild.style.width = (done / total * 100) + '%';
+    $('EL-071').textContent = `已处理 ${done} / ${total}`;
+    setCat('ST-03', { done, total });
+    if(done >= total){ clearInterval(timer); finish(targets); }
+  }, 130);
+}
+
+function finish(targets){
+  const entries = [];
+  let ok = 0, fail = 0;
+
+  targets.forEach(f => {
+    const isConflict = f.status === 'conflict';
+    if(isConflict && !S.rule.autoConflict){
+      entries.push({ dir: S.dir, from: f.name, to: f.newName, result: 'skipped', reason: '重名冲突' });
+      fail++; return;
+    }
+    entries.push({ dir: S.dir, from: f.name, to: f.newName, result: 'success' });
+    f.name = f.newName;                       /* 模拟改名成功 */
+    const sp = splitName(f.name, f.isDir); f.stem = sp.stem; f.ext = sp.ext;
+    ok++;
+  });
+
+  S.history.unshift({
+    id: 'T' + Date.now(),
+    createdAt: new Date(),
+    ruleSummary: ruleSummary(),
+    count: targets.length,
+    example: entries[0] ? `${entries[0].from} → ${entries[0].to}` : '',
+    entries, status: 'active'
+  });
+  if(S.history.length > 20) S.history.length = 20;   /* DEC-06：只留最近 20 条 */
+
+  S.running = false;
+  $('EL-072').style.display = 'none';
+  $('EL-072').firstElementChild.style.width = '0';
+  recompute();
+  setCat(fail ? 'ST-05' : 'ST-04', fail);
+  openResultModal(ok, fail, entries);
+}
+
+function ruleSummary(){
+  const r = S.rule;
+  if(r.mode === 'delete')  return r.delete.text ? `删除「${r.delete.text}」` : '无规则';
+  if(r.mode === 'replace') return r.replace.find ? `替换「${r.replace.find}」→「${r.replace.to}」` : '无规则';
+  const rr = r.rule, seg = [];
+  if(rr.prefix) seg.push(`前缀「${rr.prefix}」`);
+  if(rr.seqEnabled) seg.push(`序号 ${rr.seqStart} 起 补零${rr.seqPad}`);
+  if(rr.dateEnabled) seg.push(`日期 ${rr.dateFormat}`);
+  if(rr.suffix) seg.push(`后缀「${rr.suffix}」`);
+  if(!rr.keepOriginal) seg.push('不保留原名');
+  return seg.join(' + ') || '无规则';
+}
+
+/* ============================================================
+   11. 撤销（MOD-5）
+   ============================================================ */
+function undoTask(id){
+  const t = S.history.find(h => h.id === id);
+  if(!t || t.status === 'undone') return;
+  let n = 0;
+  [...t.entries].reverse().forEach(e => {          /* 倒序撤销，避免中间态冲突 */
+    if(e.result !== 'success') return;
+    const f = S.files.find(x => x.name === e.to);
+    if(f){ const sp = splitName(e.from, f.isDir); f.name = e.from; f.stem = sp.stem; f.ext = sp.ext; }
+    n++;
+  });
+  t.status = 'undone';
+  recompute();
+  closeModal();
+  $('EL-071').textContent = `已撤销 ${n} 项，名字都改回去啦`;
+  setCat('ST-04');
+}
+
+function undoAll(){
+  const list = S.history.filter(h => h.status === 'active');
+  if(!list.length){ $('EL-071').textContent = '没有可撤销的任务'; return; }
+  const total = list.reduce((a, h) => a + h.entries.filter(e => e.result === 'success').length, 0);
+  openModal(`
+    <div class="md-hd"><h3>全部撤销</h3>
+      <p>将把 <b>${list.length}</b> 个任务、共 <b>${total}</b> 个文件的名字全部改回去，确定吗？</p></div>
+    <div class="md-ft">
+      <button class="btn btn-ghost" style="padding:10px 18px" data-close>取消</button>
+      <button class="btn btn-primary" style="padding:10px 18px" id="okAll">确定全部撤销</button>
+    </div>`);
+  $('okAll').onclick = () => {
+    const alive = S.history.filter(h => h.status === 'active');
+    alive.forEach(h => {
+      [...h.entries].reverse().forEach(e => {
+        if(e.result !== 'success') return;
+        const f = S.files.find(x => x.name === e.to);
+        if(f){ const sp = splitName(e.from, f.isDir); f.name = e.from; f.stem = sp.stem; f.ext = sp.ext; }
+      });
+      h.status = 'undone';
+    });
+    recompute(); closeModal();
+    $('EL-071').textContent = `已全部撤销（${alive.length} 个任务）`;
+  };
+}
+
+function renderHistory(){
+  const box = $('EL-081');
+  if(!S.history.length){
+    box.innerHTML = `<div class="empty"><div class="paw">&#128062;</div><div>还没有改过名呢</div></div>`;
+    return;
+  }
+  box.innerHTML = S.history.map(h => `
+    <div class="hist-card ${h.status === 'undone' ? 'undone' : ''}">
+      <div class="hc-main">
+        <div class="hc-t">${fmtTime(h.createdAt)} · ${h.count} 项
+          <span class="tag">${h.status === 'undone' ? '已撤销' : '可撤销'}</span></div>
+        <div class="hc-eg">${esc(h.example)}</div>
+      </div>
+      <span class="hc-rule">${esc(h.ruleSummary)}</span>
+      ${h.status === 'active'
+        ? `<button class="btn btn-soft" style="padding:8px 14px;font-size:12px" data-undo="${h.id}">撤销这条</button>`
+        : `<button class="btn btn-ghost" style="padding:8px 14px;font-size:12px" disabled>已撤销</button>`}
+    </div>`).join('');
+}
+function fmtTime(d){
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ============================================================
+   12. 弹窗
+   ============================================================ */
+function openModal(html){ $('EL-901').innerHTML = html; $('EL-900').classList.remove('hide'); }
+function closeModal(){ $('EL-900').classList.add('hide'); }
+
+function openResultModal(ok, fail, entries){
+  const fails = entries.filter(e => e.result !== 'success');
+  openModal(`
+    <div class="md-hd"><h3>${fail ? '改好啦，但有几项没成功' : '全部改好啦！'}</h3>
+      <p>${fail ? '耄耋有点炸毛，下面是没改成的项目。' : '耄耋很得意，去历史页可以随时撤销。'}</p></div>
+    <div class="md-bd">
+      <div class="summary">
+        <div class="sum-card ok"><b>${ok}</b><span>成功</span></div>
+        <div class="sum-card skip"><b>${fails.length}</b><span>跳过 / 失败</span></div>
+        <div class="sum-card fail"><b>${S.files.filter(f=>f.status==='invalid').length}</b><span>未处理（非法）</span></div>
+      </div>
+      ${ok ? `<div class="sec-t">成功示例</div>
+        ${entries.filter(e=>e.result==='success').slice(0,3).map(e =>
+          `<div class="ok-item">${esc(e.from)} <span class="hl2">→</span> ${esc(e.to)}</div>`).join('')}` : ''}
+      ${fails.length ? `<div class="sec-t">以下几种情况没改成</div>
+        ${fails.map(e => `<div class="fail-item"><span class="rn">${esc(e.from)}</span>
+          <span class="rr">→ ${esc(e.to)}　<b>${esc(e.reason)}</b></span></div>`).join('')}` : ''}
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-soft" style="padding:10px 18px" id="undoThis">撤销本次</button>
+      <button class="btn btn-primary" style="padding:10px 18px" data-close>知道了</button>
+    </div>`);
+  $('undoThis').onclick = () => {
+    const t = S.history.find(h => h.status === 'active');
+    if(t) undoTask(t.id); else closeModal();
+  };
+}
+
+function openConflictModal(conflicts){
+  openModal(`
+    <div class="md-hd"><h3>有 ${conflicts.length} 项改完会撞名</h3>
+      <p>默认策略是<b>跳过这些项、不覆盖任何文件</b>。想改的话可以打开「自动处理重名冲突」，耄耋会给它们加 _1、_2 这样的后缀。</p></div>
+    <div class="md-bd">
+      <div class="sec-t">会撞名的项目</div>
+      ${conflicts.map(f => `<div class="fail-item"><span class="rn">${esc(f.name)}</span>
+        <span class="rr">→ ${esc(f.newName)}　<b>${esc(f.reason)}</b></span></div>`).join('')}
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-ghost" style="padding:10px 18px" data-close>先不改（推荐）</button>
+      <button class="btn btn-primary" style="padding:10px 18px" id="autoFix">自动加序号后继续</button>
+    </div>`);
+  $('autoFix').onclick = () => { S.rule.autoConflict = true; $('autoConflict').checked = true; closeModal(); recompute(); doRun(); };
+}
+
+function openConfirmModal(total, cb){
+  openModal(`
+    <div class="md-hd"><h3>确认改名</h3>
+      <p>即将修改 <b>${total}</b> 个文件 / 文件夹的名称，是否继续？</p></div>
+    <div class="md-ft">
+      <button class="btn btn-ghost" style="padding:10px 18px" data-close>再改改</button>
+      <button class="btn btn-primary" style="padding:10px 18px" id="okRun">确认，开始改名</button>
+    </div>`);
+  $('okRun').onclick = () => { closeModal(); cb(); };
+}
+
+function openUndoModal(){
+  const last = S.history.find(h => h.status === 'active');
+  if(!last){ $('EL-071').textContent = '还没有可以撤销的改名记录'; return; }
+  const n = last.entries.filter(e => e.result === 'success').length;
+  openModal(`
+    <div class="md-hd"><h3>撤销上一次改名</h3>
+      <p>将把 <b>${n}</b> 个文件的名字改回去（${esc(last.ruleSummary)}），确定吗？</p></div>
+    <div class="md-ft">
+      <button class="btn btn-ghost" style="padding:10px 18px" data-close>取消</button>
+      <button class="btn btn-primary" style="padding:10px 18px" id="okUndo">确定撤销</button>
+    </div>`);
+  $('okUndo').onclick = () => undoTask(last.id);
+}
+
+/* ============================================================
+   13. 事件绑定
+   ============================================================ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-close]');
+  if(t) closeModal();
+  if(e.target === $('EL-900')) closeModal();
+});
+
+/* 规则页签 */
+$('EL-040').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if(!b) return;
+  S.rule.mode = b.dataset.mode;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+  ['pane-delete','pane-replace','pane-rule'].forEach(id =>
+    $(id).classList.toggle('on', id === 'pane-' + b.dataset.mode));
+  $('EL-044').style.visibility = b.dataset.mode === 'rule' ? 'hidden' : 'visible';
+  recompute();
+});
+
+/* 规则参数（输入即预览，对应 F-08 的 200ms 防抖） */
+let deb = null;
+const onInput = fn => { clearTimeout(deb); deb = setTimeout(fn, 120); };
+$('EL-041').oninput = e => onInput(() => { S.rule.delete.text = e.target.value; recompute(); });
+$('EL-042').oninput = e => onInput(() => { S.rule.replace.find = e.target.value; recompute(); });
+$('EL-043').oninput = e => onInput(() => { S.rule.replace.to = e.target.value; recompute(); });
+$('caseSensitive').onchange = e => { S.rule.caseSensitive = e.target.checked; recompute(); };
+$('autoConflict').onchange  = e => { S.rule.autoConflict = e.target.checked; recompute(); };
+
+$('EL-045').oninput = e => onInput(() => { S.rule.rule.prefix = e.target.value; recompute(); });
+$('EL-046').oninput = e => onInput(() => { S.rule.rule.suffix = e.target.value; recompute(); });
+$('EL-047').onchange = e => { S.rule.rule.seqEnabled = e.target.checked; recompute(); };
+$('EL-048').oninput = e => onInput(() => { S.rule.rule.seqStart = +e.target.value || 0; recompute(); });
+$('EL-049').oninput = e => onInput(() => { S.rule.rule.seqStep  = Math.max(1, +e.target.value || 1); recompute(); });
+$('EL-050').oninput = e => onInput(() => { S.rule.rule.seqPad   = Math.max(0, Math.min(6, +e.target.value || 0)); recompute(); });
+$('EL-054').onchange = e => { S.rule.rule.seqPosition = e.target.value; recompute(); };
+$('EL-051').onchange = e => { S.rule.rule.dateEnabled = e.target.checked; recompute(); };
+$('EL-052').onchange = e => { S.rule.rule.dateFormat = e.target.value; recompute(); };
+$('EL-053').onchange = e => { S.rule.rule.keepOriginal = e.target.checked; recompute(); };
+
+/* 操作按钮（R-03） */
+document.querySelectorAll('#R-03 .btn').forEach(b => {
+  b.onclick = () => {
+    const act = b.dataset.act;
+    if(act === 'addfile' || act === 'addfolder'){
+      addFiles(SAMPLE.filter(n => act === 'addfolder' ? DIR_FLAGS[n] : !DIR_FLAGS[n]));
+    }
+    if(act === 'clear'){
+      if(!S.files.length) return;
+      openModal(`<div class="md-hd"><h3>清空列表</h3>
+        <p>将移除列表中的 <b>${S.files.length}</b> 项。文件本身不会被删除，只是不在这里显示了。</p></div>
+        <div class="md-ft"><button class="btn btn-ghost" style="padding:10px 18px" data-close>取消</button>
+        <button class="btn btn-primary" style="padding:10px 18px" id="okClear">确定清空</button></div>`);
+      $('okClear').onclick = () => { closeModal(); resetList(); setCat('ST-01'); };
+    }
+  };
+});
+
+/* 行内删除 */
+$('EL-032').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if(!b) return;
+  S.files = S.files.filter(f => f.id !== +b.dataset.del);
+  recompute();
+});
+
+/* 开始改名 / 撤销 */
+$('EL-060').onclick = () => {
+  if(S.running){ S.running = false; setCat('ST-01'); render(); return; }
+  run();
+};
+$('EL-061').onclick = () => { switchView('history'); };
+$('EL-080').onclick = () => switchView('main');
+$('EL-083').onclick = undoAll;
+$('EL-081').addEventListener('click', e => {
+  const b = e.target.closest('[data-undo]'); if(b) undoTask(b.dataset.undo);
+});
+
+/* 视图切换 */
+function switchView(v){
+  $('view-main').classList.toggle('on', v === 'main');
+  $('view-history').classList.toggle('on', v === 'history');
+  if(v === 'history') renderHistory();
+}
+
+/* 拖拽（F-07） */
+const win = $('EL-win'), veil = $('EL-012');
+let dragDepth = 0;
+win.addEventListener('dragenter', e => {
+  e.preventDefault(); dragDepth++;
+  veil.classList.remove('hide'); setCat('ST-02', S.files.length + 3);
+});
+win.addEventListener('dragover', e => e.preventDefault());
+win.addEventListener('dragleave', e => {
+  e.preventDefault(); dragDepth--;
+  if(dragDepth <= 0){ dragDepth = 0; veil.classList.add('hide'); if(!S.running) setCat('ST-01'); }
+});
+win.addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; veil.classList.add('hide');
+  const names = [...SAMPLE].slice(0, 5);   /* 原型里用示例文件模拟真实拖入 */
+  addFiles(names);
+});
+
+/* 演示控制台 */
+document.querySelectorAll('.cbtn[data-st]').forEach(b => {
+  b.onclick = () => setCat(b.dataset.st, b.dataset.st === 'ST-02' ? 12 : (b.dataset.st === 'ST-03' ? {done:37,total:120} : 3));
+});
+document.querySelectorAll('.cbtn[data-mo]').forEach(b => {
+  b.onclick = () => {
+    const m = b.dataset.mo;
+    if(m === 'result')   openResultModal(9, 2, [
+      { from: '【某某公众号】高等数学-上册课件.pdf', to: '高等数学-上册课件.pdf', result: 'success' },
+      { from: 'abc广告.txt', to: 'abc.txt', result: 'success' },
+      { from: 'IMG_0023(1).JPG', to: 'IMG_0023.JPG', result: 'skipped', reason: '重名冲突' },
+      { from: '会议纪要-最终版-最终版.docx', to: '会议纪要-定稿-最终版.docx', result: 'failed', reason: '文件被占用' }
+    ]);
+    if(m === 'conflict') openConflictModal([
+      { name: 'IMG_0023(1).JPG', newName: 'IMG_0023.JPG', reason: '批次内重名' },
+      { name: '报告-草稿.docx', newName: '报告.docx', reason: '已经有同名文件了' }
+    ]);
+    if(m === 'confirm')  openConfirmModal(120, () => {});
+    if(m === 'undo')     openUndoModal();
+  };
+});
+document.querySelectorAll('.cbtn[data-sc]').forEach(b => {
+  b.onclick = () => {
+    const sc = b.dataset.sc;
+    document.querySelectorAll('.cbtn[data-sc]').forEach(x => x.classList.toggle('on', x === b));
+    if(sc === 'reset'){ resetList(); setCat('ST-01');
+      $('EL-041').value = ''; $('EL-042').value = ''; $('EL-043').value = '';
+      S.rule.delete.text = ''; S.rule.replace.find = ''; S.rule.replace.to = '';
+      recompute(); return; }
+    resetList();
+    addFiles(SAMPLE);
+    if(sc === '1'){
+      setMode('delete'); $('EL-041').value = '【某某公众号】'; S.rule.delete.text = '【某某公众号】';
+    }
+    if(sc === '2'){
+      setMode('replace'); $('EL-042').value = '(1)'; S.rule.replace.find = '(1)'; S.rule.replace.to = '';
+    }
+    if(sc === '3'){
+      setMode('rule');
+      S.rule.rule = { prefix: '{d}-发票-', suffix: '', seqEnabled: true, seqStart: 1, seqStep: 1,
+                      seqPad: 3, seqPosition: 'suffix', dateEnabled: false,
+                      dateFormat: 'YYYY-MM-DD', keepOriginal: false };
+      $('EL-045').value = '{d}-发票-'; $('EL-046').value = '';
+      $('EL-047').checked = true; $('EL-048').value = 1; $('EL-049').value = 1; $('EL-050').value = 3;
+      $('EL-054').value = 'suffix'; $('EL-053').checked = false;
+    }
+    recompute();
+  };
+});
+function setMode(m){
+  S.rule.mode = m;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.mode === m));
+  ['pane-delete','pane-replace','pane-rule'].forEach(id => $(id).classList.toggle('on', id === 'pane-' + m));
+  $('EL-044').style.visibility = m === 'rule' ? 'hidden' : 'visible';
+}
+
+/* ============================================================
+   14. 初始化：预置 3 条历史记录，让撤销页不是空的
+   ============================================================ */
+(function init(){
+  const mk = (mins, summary, entries) => ({
+    id: 'T' + (Date.now() - mins * 60000), createdAt: new Date(Date.now() - mins * 60000),
+    ruleSummary: summary, count: entries.length,
+    example: `${entries[0].from} → ${entries[0].to}`, entries, status: 'active'
+  });
+  S.history = [
+    mk(38, '删除「【某某公众号】」', [
+      { dir: S.dir, from: '【某某公众号】高等数学-上册课件.pdf', to: '高等数学-上册课件.pdf', result: 'success' },
+      { dir: S.dir, from: '【某某公众号】线性代数课件.pdf',   to: '线性代数课件.pdf',   result: 'success' }
+    ]),
+    mk(96, '序号 1 起 补零3', [
+      { dir: S.dir, from: 'IMG_0023.JPG', to: 'IMG_0023.JPG', result: 'success' }
+    ]),
+    mk(1500, '替换「最终版」→「定稿」', [
+      { dir: S.dir, from: '会议纪要-最终版-最终版.docx', to: '会议纪要-定稿-最终版.docx', result: 'success' }
+    ])
+  ];
+  S.history[2].status = 'undone';    /* 展示「已撤销」态 */
+  setCat('ST-01');
+  recompute();
+})();
+</script>
+</body>
+</html>

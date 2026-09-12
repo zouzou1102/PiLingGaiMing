@@ -1,0 +1,104 @@
+/**
+ * 设计令牌（设计规范 §1 / §2 / §3 / §7 的代码化）。
+ *
+ * 纪律：**组件里禁止出现硬编码色值 / 圆角 / 阴影**（接口文档 P-10）。
+ * 视觉必须单一来源，否则改一次主色要满仓库找 `#F5A623`。
+ */
+
+:root {
+  /* ── 品牌色 ─────────────────────────────────────────────────────── */
+  --md-orange-primary: #f5a623;
+  --md-orange-accent: #ff8a3d;
+  --md-orange-dark: #e08b33;
+
+  /* ── 背景与描边 ─────────────────────────────────────────────────── */
+  --md-bg-cream: #fffbf5;
+  --md-bg-card: #ffffff;
+  --md-bg-warm: #fff6e9;
+  --md-bg-titlebar: #fff4e4;
+  --md-bg-sunken: #f7efe3;
+  --md-bg-disabled: #e8dcd0;
+  --md-line: #f0e4d4;
+  --md-line-strong: #c8bbae;
+
+  /* ── 文字 ───────────────────────────────────────────────────────── */
+  --md-ink-1: #3a2a20;
+  --md-ink-2: #6b5b4d;
+  --md-ink-3: #8a8178;
+  --md-ink-4: #b9ac9e;
+
+  /* ── 语义色（只用于状态表达，不参与品牌表达）───────────────────── */
+  --md-ok: #4caf7d;
+  --md-ok-bg: #eaf6f0;
+  --md-bad: #e5544b;
+  --md-bad-bg: #fdebea;
+  --md-bad-bg-soft: #fdf2f1;
+  --md-bad-hover: #d8483f;
+  --md-warn: #f0a020;
+  --md-warn-bg: #fdf0dc;
+  --md-neutral-bg: #eae3d8;
+  --md-highlight-bg: #fff0dc;
+
+  /* ── 间距（4px 台阶；不用 5/7/9/13/18 这类随手值）──────────────── */
+  --md-space-1: 4px;
+  --md-space-2: 8px;
+  --md-space-3: 12px;
+  --md-space-4: 16px;
+  --md-space-5: 20px;
+  --md-space-6: 24px;
+  --md-space-8: 32px;
+  --md-space-12: 48px;
+
+  /* ── 圆角（面积越大越圆）───────────────────────────────────────── */
+  --md-radius-card: 16px;
+  --md-radius-modal: 16px;
+  --md-radius-btn: 12px;
+  --md-radius-input: 10px;
+  --md-radius-tabwrap: 14px;
+  --md-radius-tab: 10px;
+  --md-radius-badge: 6px;
+  --md-radius-chip: 9px;
+
+  /* ── 阴影（只用两层，不用内阴影/发光/多层堆叠）─────────────────── */
+  --md-shadow-card: 0 4px 16px rgba(180, 120, 60, 0.12);
+  --md-shadow-modal: 0 18px 48px rgba(120, 80, 40, 0.22);
+  --md-shadow-btn-hover: 0 4px 12px rgba(180, 120, 60, 0.28);
+  --md-shadow-tab: 0 2px 6px rgba(180, 120, 60, 0.16);
+
+  /* ── 字体 ───────────────────────────────────────────────────────── */
+  --md-font-ui: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+  --md-font-brand: 'ZCOOL KuaiLe', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --md-font-num: Inter, 'Noto Sans SC', system-ui, sans-serif;
+
+  /* ── 尺寸（设计规范 §5.1）─────────────────────────────────────── */
+  --md-titlebar-h: 44px;
+  --md-statusbar-h: 32px;
+  --md-leftbar-w: 300px;
+  --md-leftbar-w-narrow: 260px;
+  --md-list-head-h: 42px;
+  --md-row-h: 36px;
+  --md-actionbar-h: 64px;
+  --md-ctrl-h: 40px;
+  --md-btn-h: 42px;
+
+  /* ── 动效（设计规范 §7 / 交互说明 §11.1）───────────────────────── */
+  --md-ease-pop: cubic-bezier(0.34, 1.5, 0.64, 1);
+  --md-ease-modal: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --md-dur-press: 120ms;
+  --md-dur-hover: 180ms;
+  --md-dur-modal: 220ms;
+  --md-dur-cat: 320ms;
+  --md-dur-progress: 180ms;
+}
+
+/**
+ * 「减少动画」无障碍开关（设计规范 §7）。
+ * 开启后所有动效时长归零 —— 状态切换只换表情、不做位移。
+ */
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0ms !important;
+}
