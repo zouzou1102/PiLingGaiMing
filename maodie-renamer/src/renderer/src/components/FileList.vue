@@ -79,7 +79,9 @@ const visibleRows = computed(() => {
 .md-filelist {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  flex: 1 1 auto;
+  /* ★ 列表区最小高度：规则区（尤其规则化模式）再大也挤不掉它，保证「看得见」 */
+  min-height: 180px;
   background: var(--md-bg-card);
   border-radius: var(--md-radius-card);
   box-shadow: var(--md-shadow-card);
