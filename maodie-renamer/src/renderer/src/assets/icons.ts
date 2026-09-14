@@ -13,24 +13,22 @@ import arrowLeft from './icons/icon-箭头左.svg?raw'
 import arrowRight from './icons/icon-箭头右.svg?raw'
 import caretDown from './icons/icon-下拉.svg?raw'
 import check from './icons/icon-勾选.svg?raw'
-import close from './icons/icon-关闭.svg?raw'
 import fileIcon from './icons/icon-文件.svg?raw'
 import folder from './icons/icon-文件夹.svg?raw'
-import maximize from './icons/icon-最大化.svg?raw'
-import minimize from './icons/icon-最小化.svg?raw'
 import rowDelete from './icons/icon-行内删除.svg?raw'
 import warn from './icons/icon-警告.svg?raw'
+
+// icon-最小化 / 最大化 / 关闭 三个切图已不再在此处引用：
+// 标题栏按钮改用猫咪切图 resources/cats/ui-btn-*.svg（设计规范 §R-01 定稿）。
+// 切图文件本身保留在 assets/icons/ 与 切图资源/icons/，需要时随时可切回来。
 
 export const ICONS = {
   arrowLeft,
   arrowRight,
   caretDown,
   check,
-  close,
   file: fileIcon,
   folder,
-  maximize,
-  minimize,
   rowDelete,
   warn,
 } as const
