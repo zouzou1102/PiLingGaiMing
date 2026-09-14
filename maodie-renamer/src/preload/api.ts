@@ -60,7 +60,7 @@ export function buildMaodieApi(bridge: PreloadBridge): MaoDieAPI {
       pickFiles: () =>
         bridge.invoke(CH.FS_PICK_FILES) as Promise<MdResult<{ canceled: boolean; paths: string[] }>>,
       pickDirectory: () =>
-        bridge.invoke(CH.FS_PICK_DIRECTORY) as Promise<MdResult<{ canceled: boolean; path: string | null }>>,
+        bridge.invoke(CH.FS_PICK_DIRECTORY) as Promise<MdResult<{ canceled: boolean; paths: string[] }>>,
       resolvePaths: (req: ResolvePathsRequest) =>
         bridge.invoke(CH.FS_RESOLVE_PATHS, req) as Promise<MdResult<ResolvedBatch>>,
     },

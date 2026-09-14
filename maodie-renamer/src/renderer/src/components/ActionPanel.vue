@@ -31,8 +31,8 @@ async function pickDirectory(): Promise<void> {
   busy.value = true
   try {
     const res = await window.maodie.fs.pickDirectory()
-    // DEC-01：只加入该文件夹本身，不递归内部文件 —— 接口形状上就只有这一个路径
-    if (res.ok && !res.data.canceled && res.data.path) await files.addPaths([res.data.path])
+    // DEC-01：多选也只是「一次加 N 个文件夹本身」，每个都不递归内部文件
+    if (res.ok && !res.data.canceled) await files.addPaths(res.data.paths)
   } finally {
     busy.value = false
   }
