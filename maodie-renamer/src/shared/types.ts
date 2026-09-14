@@ -404,7 +404,8 @@ export interface MaoDieAPI {
   }
   fs: {
     pickFiles(): Promise<MdResult<{ canceled: boolean; paths: string[] }>>
-    pickDirectory(): Promise<MdResult<{ canceled: boolean; path: string | null }>>
+    /** 可多选；返回的是「选中的那几个文件夹本身」，绝不展开它们内部（DEC-01） */
+    pickDirectory(): Promise<MdResult<{ canceled: boolean; paths: string[] }>>
     resolvePaths(req: ResolvePathsRequest): Promise<MdResult<ResolvedBatch>>
   }
   rename: {

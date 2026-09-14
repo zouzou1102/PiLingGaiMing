@@ -1,10 +1,14 @@
 /**
  * md:fs:* —— 文件系统与系统对话框。
  *
- * 关于 DEC-01 的实现保证：`md:fs:pickDirectory` **永远只返回选中的那一个路径**，
- * 不做任何子项枚举。递归能力从接口形状上就不存在 —— 界面拿到的就是一个字符串。
+ * 关于 DEC-01 的实现保证：`md:fs:pickDirectory` **只返回用户在对话框里选中的那几个路径**，
+ * 不做任何子项枚举 —— 递归能力从接口形状上就不存在（界面拿到的是一串路径）。
+ *
+ * 多选 ≠ 递归：选中 3 个文件夹，得到的是**这 3 个文件夹本身**，不是它们里面的东西。
+ * 所以 `multiSelections` 与 DEC-01 不冲突。
  */
 
+import { dirname } from 'node:path'
 import { dialog, ipcMain } from 'electron'
 import { CH } from '@shared/channels'
 import { MD_ERROR, MdError } from '@shared/errors'
@@ -34,16 +38,28 @@ export function registerFsIpc(): void {
     }),
   )
 
+  /**
+   * 上次选过文件夹的那一层目录。
+   * 只活在本次运行里（不落盘 —— 为这点小事动 prefs 的 schema 不值得）。
+   * 用途：批量连续添加时，不用每次从「此电脑」一路点回去。
+   */
+  let lastDir: string | undefined
+
   ipcMain.handle(CH.FS_PICK_DIRECTORY, () =>
     business(async () => {
       const win = getMainWindow()
       if (!win) throw new MdError(MD_ERROR.E_UNKNOWN, '窗口不存在')
       const r = await dialog.showOpenDialog(win, {
-        title: '选择要改名的文件夹',
-        // ★ 绝不能加任何递归 / 展开相关的属性（DEC-01）
-        properties: ['openDirectory'],
+        title: '选择要改名的文件夹（可多选）',
+        // ★ multiSelections 只是「一次能选中几个」，仍然绝无递归 / 展开相关的属性（DEC-01）
+        properties: ['openDirectory', 'multiSelections'],
+        // 打开时的落点：上次那批的**父目录**（传父目录才会停在那层看得到它们）
+        ...(lastDir === undefined ? {} : { defaultPath: lastDir }),
       })
-      return { canceled: r.canceled, path: r.filePaths[0] ?? null }
+      if (!r.canceled && r.filePaths.length > 0) {
+        lastDir = dirname(r.filePaths[r.filePaths.length - 1])
+      }
+      return { canceled: r.canceled, paths: r.filePaths }
     }),
   )
 

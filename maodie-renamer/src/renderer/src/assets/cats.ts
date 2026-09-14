@@ -56,3 +56,20 @@ export function catText(state: CatState): string {
 export function catHoldMs(state: CatState): number {
   return CAT_MANIFEST.states[state]?.holdMs ?? 0
 }
+
+/** 窗口按钮（R-01 标题栏右上角）的四个状态 */
+export type WindowButtonName = 'minimize' | 'maximize' | 'restore' | 'close'
+
+/**
+ * 取窗口按钮的猫咪切图。
+ *
+ * **约定优于配置**：文件名就是接口 —— 换图 = 用**同名文件**替换
+ * `resources/cats/ui-btn-<name>.svg`，代码一行不用改。
+ * 没走 manifest 是因为这些按钮没有 holdMs / 文案之类的附加数据，文件名足够表达；
+ * 状态机那五个（ST-01~05）才需要 manifest 承载停留时长与文案。
+ *
+ * 找不到文件时返回空串：按钮会退化成「只有悬停底色、没有图标」，不会崩。
+ */
+export function windowButtonSvg(name: WindowButtonName): string {
+  return byFile.get(`ui-btn-${name}.svg`) ?? ''
+}

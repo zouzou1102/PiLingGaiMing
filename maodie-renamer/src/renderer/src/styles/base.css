@@ -94,13 +94,10 @@ textarea {
   background: rgba(224, 139, 51, 0.12);
 }
 
+/* 关闭按钮悬停：红底保留；图标**不再刷白** ——
+   猫咪切图自带颜色（橘耳 + 深色符号），刷成白色会变剪影，猫就没了。 */
 .md-winbtn--close:hover {
   background: var(--md-bad);
-}
-
-/* 关闭图标悬停变白（切图资源只给了深色版本）*/
-.md-winbtn--close:hover .md-icon > svg {
-  filter: brightness(0) invert(1);
 }
 
 /* ══ 图标 ═════════════════════════════════════════════════════════ */
