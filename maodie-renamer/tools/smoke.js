@@ -248,6 +248,59 @@ const FEATURES = [
      .seeContains('.md-filelist__newname', 'abc', '回到「保持原样」：预览恢复小写 abc')
      .seeCount('.md-adv__badge', 0, '无启用项时徽标消失')
   ),
+
+  // ══ P1 说明小白化：照抄表（EL-104）+ 当场演示（EL-105）════════════════
+  // 说明：这三条沿用上面的状态（正则已开启）。第一条就断言「两个框都切等宽」——
+  // 那是正则开着的可见证据；万一将来有人调整用例顺序，这里会当场红，
+  // 而不是静默地在错误前提下"通过"。
+
+  feature('P1 小白化：「?」小抄卡按模式给不同例子', (c) =>
+    c.click('.md-tabs .md-tab:nth-child(2)')
+     .seeText('.md-tabs .md-tab:nth-child(2)', '替换字符', '切到「替换字符」页签')
+     .seeCount('.md-input--mono', 2, '正则开启态：查找 / 替换两个框都切等宽')
+     // 折叠条此刻是展开的（前面的用例点开过），点两下 = 关 → 开，把状态摆正
+     .click('.md-adv__bar')
+     .notSee('.md-adv__body', '第一下：折叠条收起')
+     .click('.md-adv__bar')
+     .see('.md-adv__body', '第二下：重新展开（不依赖上一步的残留状态）')
+     .see('.md-adv__helpbtn', '「? 看不懂？」按钮可见')
+     .notSee('.md-adv__cheat', '小抄卡默认不出现（要点开才有）')
+     .click('.md-adv__helpbtn')
+     .seeAttr('.md-adv__helpbtn', 'aria-expanded', 'true', '点开后 aria-expanded=true')
+     .see('.md-adv__cheat', '小抄卡出现')
+     .seeCount('.md-adv__cheatrow', 4, '替换模式给 4 个例子')
+     .click('.md-tabs .md-tab:nth-child(1)')
+     .seeCount('.md-adv__cheatrow', 3, '删除模式只剩 3 个（按模式过滤，不带 $1 那种只属于替换的写法）')
+     .click('.md-tabs .md-tab:nth-child(2)')
+     .seeCount('.md-adv__cheatrow', 4, '切回替换模式又是 4 个')
+     // 收尾滚到卡片上，让报告里这张「操作后」的图能看见照抄表本身
+     .scroll('.md-adv__cheat')
+     .see('.md-adv__cheat', '照抄表可见（4 个例子，含「替换填」列）')
+  ),
+
+  feature('P1 小白化：当场演示跟着填的内容真变', (c) =>
+    c.click('input[placeholder="例如：最终版"]')
+     .type('(\\d{4})-(\\d{2})-(\\d{2})')
+     .click('input[placeholder="留空 = 删除"]')
+     .type('$1年$2月$3日')
+     .waitUntil("(() => { const n = document.querySelector('.md-adv__demonew'); return !!n && n.textContent.includes('2026年08月01日'); })()", 8000)
+     .scroll('.md-adv__demo')
+     .see('.md-adv__demo', '演示区可见（有尺寸、在视口内）')
+     .seeContains('.md-adv__demoline', '发票 2026-08-01.pdf', '左边是示例原名')
+     .seeText('.md-adv__demonew', '发票 2026年08月01日.pdf', '右边 = 示例名字按当前填写内容真算出来的结果（扩展名仍原样保留）')
+  ),
+
+  feature('P1 小白化：写法对不上时，不假装"变了"', (c) =>
+    // 先把光标按到末尾再追加（点击落在输入框正中会插到文字中间，那样就测歪了）
+    c.click('input[placeholder="例如：最终版"]')
+     .key('End')
+     .type('ZZ')
+     .waitUntil("(() => { const n = document.querySelector('.md-adv__demonew'); return !!n && n.textContent.trim() === '发票 2026-08-01.pdf'; })()", 8000)
+     .scroll('.md-adv__demo')
+     .seeText('.md-adv__demonew', '发票 2026-08-01.pdf', '示例名字里没有 ZZ，匹配不上 → 如实显示"没变"')
+     .seeContains('.md-adv__demo', '没找到能匹配的内容', '并明确提示「没找到能匹配的内容」')
+     .seeStyle('.md-adv__demonew', 'color', 'rgb(185, 172, 158)', '未变化时用灰字 #B9AC9E，而不是"变了"的橘色（不骗人）')
+  ),
 ];
 
 // ── 主流程 ───────────────────────────────────────────────────────────

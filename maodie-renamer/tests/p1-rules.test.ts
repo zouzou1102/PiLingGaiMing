@@ -19,6 +19,8 @@ import {
   REGEX_MAX_LENGTH,
 } from '../src/shared/rule-engine'
 import { buildRuleSummary } from '../src/shared/rule-summary'
+import { joinName, splitName } from '../src/shared/name-split'
+import { REGEX_CHEATSHEET, REGEX_DEMO_FILE } from '../src/shared/regex-cheatsheet'
 import { DEFAULT_RULE, type RuleConfig } from '../src/shared/types'
 
 function rule(
@@ -181,4 +183,49 @@ test('TC-26 回归：正则关 + 大小写 none 时，输出与 P0 逐字节一�
 test('TC-26 回归：旧的 3 参调用仍可用（向后兼容）', () => {
   assert.equal(applyDelete('abc广告', '广告', false), 'abc')
   assert.equal(applyReplace('会议纪要-最终版', '最终版', '定稿', false), '会议纪要-定稿')
+})
+
+/* ── 照抄表（EL-104）与当场演示（EL-105）───────────────────────────────
+   这两块是「给新手看的说明」。说明里的每个结果都由引擎真算一遍 ——
+   否则文案写歪了（比如将来改了引擎行为）没有任何东西会发现。
+   这就是它们当初被放进 src/shared/ 而不是组件里的原因。 */
+
+test('照抄表：每一行写的结果，都与引擎真算的完全一致', () => {
+  assert.ok(REGEX_CHEATSHEET.length > 0, '照抄表不能是空的')
+  for (const row of REGEX_CHEATSHEET) {
+    const where = `照抄表「${row.goal}」`
+    // 不变式：删除模式没有「替换框」，所以含 delete 的行替换内容必须留空
+    if (row.modes.includes('delete')) {
+      assert.equal(row.to, '', `${where}：含删除模式的行，替换框必须留空`)
+      assert.equal(
+        applyDelete(row.sampleFrom, row.find, false, true),
+        row.sampleTo,
+        `${where}：删除模式算出来的结果与表里写的不一致`,
+      )
+    }
+    if (row.modes.includes('replace')) {
+      assert.equal(
+        applyReplace(row.sampleFrom, row.find, row.to, false, true),
+        row.sampleTo,
+        `${where}：替换模式算出来的结果与表里写的不一致`,
+      )
+    }
+  }
+})
+
+test('照抄表：删除模式的行不会带 $1（那个在删除模式里根本没法填）', () => {
+  for (const row of REGEX_CHEATSHEET.filter((r) => r.modes.includes('delete'))) {
+    assert.ok(!row.to.includes('$'), `照抄表「${row.goal}」：删除模式的行不该出现 $n`)
+  }
+})
+
+test('当场演示（EL-105）：示例名字拆出主体与扩展名，扩展名不参与规则', () => {
+  const parts = splitName(REGEX_DEMO_FILE, false)
+  assert.equal(parts.stem, '发票 2026-08-01')
+  assert.equal(parts.ext, '.pdf')
+  // 用照抄表里的写法跑一遍端到端（与组件里调的是同一个函数）
+  assert.equal(
+    joinName(applyReplace(parts.stem, '(\\d{4})-(\\d{2})-(\\d{2})', '$1年$2月$3日', false, true), parts.ext),
+    '发票 2026年08月01日.pdf',
+  )
 })
