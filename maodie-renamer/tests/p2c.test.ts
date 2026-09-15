@@ -26,6 +26,7 @@ import {
 } from '../src/shared/history-detail'
 import { CLI_USAGE, isCliInvocation, parseCliArgs } from '../src/shared/cli-args'
 import type { ExecuteResult, RenameEntry } from '../src/shared/types'
+import { runCli } from '../src/main/cli/run'
 import { initStorage } from '../src/main/services/storage'
 import {
   appendTask,
@@ -240,4 +241,61 @@ test('清空历史：本来就是空的时候返回 0，不炸', async () => {
   await loadHistory()
   assert.equal(await clearAllTasks(), 0)
   await fsp.rm(dir, { recursive: true, force: true })
+})
+
+/* ══ 命令行模式（F-15 的安全底线）══════════════════════════════════════ */
+
+test('CLI：★ 不传 --yes 只打印不改名；带 --yes 才真改，且改名写入历史', async () => {
+  const work = await fsp.mkdtemp(path.join(os.tmpdir(), 'md-cli-work-'))
+  const data = await fsp.mkdtemp(path.join(os.tmpdir(), 'md-cli-data-'))
+  // 用「发票广告.txt」而不是「发票 广告.txt」：删除模式只删匹配到的文字、不会顺手 trim
+  // 空格（那是引擎既定语义），夹具带空格会让断言在「发票 .txt」上失败，与本次无关。
+  await fsp.writeFile(path.join(work, '发票广告.txt'), 'x')
+
+  const logs: string[] = []
+  const deps = {
+    out: (s: string) => logs.push(s),
+    err: (s: string) => logs.push('ERR:' + s),
+    userDataDir: data,
+  }
+
+  // ① dry-run（默认）：文件一个字节都不许动
+  assert.equal(await runCli(['--rename', '--dir', work, '--delete', '广告'], deps), 0)
+  assert.ok(logs.join('\n').includes('dry-run'), '必须明确告诉用户「不会改动任何文件」')
+  assert.deepEqual(await fsp.readdir(work), ['发票广告.txt'], 'dry-run 不许改文件')
+  assert.deepEqual(listTasks(), [], 'dry-run 不许写历史')
+
+  // ② --yes：真改
+  logs.length = 0
+  assert.equal(await runCli(['--rename', '--dir', work, '--delete', '广告', '--yes'], deps), 0)
+  const names = await fsp.readdir(work)
+  assert.ok(names.includes('发票.txt'), `应已改名，实际：${names.join(',')}`)
+  assert.ok(!names.includes('发票广告.txt'))
+  assert.equal(listTasks().length, 1, '★ CLI 改名必须写入历史，否则界面里撤不回来')
+  assert.equal(listTasks()[0].entries[0].toName, '发票.txt')
+
+  await fsp.rm(work, { recursive: true, force: true })
+  await fsp.rm(data, { recursive: true, force: true })
+})
+
+test('CLI：参数错时退出码 2，且不碰任何文件', async () => {
+  const errs: string[] = []
+  const code = await runCli(['--rename', '--delete', 'x'], {
+    out: () => {},
+    err: (s: string) => errs.push(s),
+    userDataDir: '',
+  })
+  assert.equal(code, 2)
+  assert.ok(errs.join('\n').includes('--dir'), '要把中文原因说清楚')
+})
+
+test('CLI：目录不存在时退出码 2，并说明读不到哪个目录', async () => {
+  const errs: string[] = []
+  const code = await runCli(['--rename', '--dir', path.join(os.tmpdir(), 'md-not-exist-xyz'), '--delete', 'a'], {
+    out: () => {},
+    err: (s: string) => errs.push(s),
+    userDataDir: '',
+  })
+  assert.equal(code, 2)
+  assert.ok(errs.join('\n').includes('读不到目录'))
 })
