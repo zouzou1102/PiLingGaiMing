@@ -48,11 +48,49 @@ const cliCommand = computed(() => {
   return `${exe} --rename --dir "D:\\下载\\素材" --delete "广告" --yes`
 })
 
+/**
+ * 复制到剪贴板。
+ *
+ * ★ 为什么不直接用 `navigator.clipboard.writeText` 就完事：
+ *   它是**异步剪贴板 API**，Chromium 要求**文档处于聚焦状态**，否则抛
+ *   `NotAllowedError`（DOMException）。实测在「窗口不抢焦点」的场景下必然失败
+ *   （自动化冒烟就是这样起的窗口）。
+ *   不接异常的话：界面既没提示、控制台又抛一个未处理异常 —— 正是本项目最忌讳的
+ *   「用户点了没反应、界面却看不出异常」。
+ *   所以：先试异步 API，失败就退回 `execCommand('copy')`（它对聚焦不敏感），
+ *   两条都不行就**如实告诉用户复制没成功**，让他手动选中复制。
+ *
+ * ★ 为什么不用 IPC 走主进程剪贴板：设计明确「不加通道」（接口文档的通道数是冻结的，
+ *   复制属于渲染层能力）。加一条通道只为一件事，代价与收益不成比例。
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (text === '') return false
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // 退回旧接口：需要先选中一段文本才能复制
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 async function copyText(text: string, what: string): Promise<void> {
-  if (text === '') return
-  // 复制成功给一次轻提示（复用既有提示位，**不弹窗**）；不新增 IPC 通道
-  await navigator.clipboard.writeText(text)
-  task.setStatusOverride(`${what}已复制`)
+  const ok = await copyToClipboard(text)
+  // 成功/失败都要说话 —— 不静默
+  task.setStatusOverride(ok ? `${what}已复制` : `${what}没复制上，请手动选中后按 Ctrl+C`)
 }
 </script>
 
