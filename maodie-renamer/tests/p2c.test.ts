@@ -14,6 +14,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import {
   DETAIL_RENDER_LIMIT,
@@ -23,7 +25,15 @@ import {
   detectEviction,
 } from '../src/shared/history-detail'
 import { CLI_USAGE, isCliInvocation, parseCliArgs } from '../src/shared/cli-args'
-import type { RenameEntry } from '../src/shared/types'
+import type { ExecuteResult, RenameEntry } from '../src/shared/types'
+import { initStorage } from '../src/main/services/storage'
+import {
+  appendTask,
+  buildTask,
+  clearAllTasks,
+  listTasks,
+  loadHistory,
+} from '../src/main/services/history-store'
 
 /* ── 定位工程根目录（与 p2a-theme.test.ts 同一约定）────────────────── */
 const ROOT = process.cwd()
@@ -174,4 +184,60 @@ test('CLI：用法文本里必须写明「不传 --yes 只打印」与「默认�
   assert.match(CLI_USAGE, /--yes/)
   assert.match(CLI_USAGE, /dry-run/)
   assert.match(CLI_USAGE, /不覆盖/)
+})
+
+/* ══ 清空历史（IX-101 · TC-35~37）══════════════════════════════════════ */
+
+/** 造一个最小可用的 ExecuteResult（buildTask 只读 summary，但类型要完整）*/
+function fakeResult(): ExecuteResult {
+  return {
+    taskId: 't',
+    canceled: false,
+    summary: { total: 1, success: 1, skipped: 0, invalid: 0, failed: 0 },
+    successExamples: [],
+    problems: [],
+    problemsTotal: 0,
+    problemsTruncated: false,
+    recordSaved: true,
+    elapsedMs: 0,
+  }
+}
+
+test('清空历史：记录清空、落盘为空、★ 文件本身一根汗毛都没动', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'md-p2c-'))
+  const victim = path.join(dir, '发票 广告.txt')
+  await fsp.writeFile(victim, 'x')
+  const before = await fsp.stat(victim)
+
+  initStorage(dir)
+  await loadHistory()
+  await appendTask(
+    buildTask('t1', '2026-09-15', '删除「广告」', fakeResult(), [
+      { dirPath: dir, fromName: '发票 广告.txt', toName: '发票.txt' },
+    ]),
+  )
+  assert.equal(listTasks().length, 1, '前置：应先有一条记录')
+
+  const cleared = await clearAllTasks()
+  assert.equal(cleared, 1, '应回报清掉了 1 条')
+  assert.deepEqual(listTasks(), [], '内存里应已清空')
+
+  // 落盘也必须是空的（重新读一遍，不采信内存）
+  await loadHistory()
+  assert.deepEqual(listTasks(), [], '重新从磁盘读出来也应为空')
+
+  // ★ 红线：只删记录，绝不碰文件
+  const after = await fsp.stat(victim)
+  assert.equal(after.mtimeMs, before.mtimeMs, '文件时间戳不许变')
+  assert.deepEqual(await fsp.readdir(dir).then((l) => l.filter((x) => x.endsWith('.txt'))), ['发票 广告.txt'])
+
+  await fsp.rm(dir, { recursive: true, force: true })
+})
+
+test('清空历史：本来就是空的时候返回 0，不炸', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'md-p2c-'))
+  initStorage(dir)
+  await loadHistory()
+  assert.equal(await clearAllTasks(), 0)
+  await fsp.rm(dir, { recursive: true, force: true })
 })

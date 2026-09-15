@@ -8,7 +8,7 @@
 import { ipcMain } from 'electron'
 import { CH } from '@shared/channels'
 import { MD_ERROR, MdError } from '@shared/errors'
-import { listTasks, undoAll, undoTask } from '../services/history-store'
+import { listTasks, clearAllTasks, undoAll, undoTask } from '../services/history-store'
 import { getMainWindow } from '../window'
 import { business } from './result'
 
@@ -30,4 +30,7 @@ export function registerHistoryIpc(): void {
   )
 
   ipcMain.handle(CH.HISTORY_UNDO_ALL, () => business(() => undoAll(emitProgress)))
+
+  // P2-C：清空历史（第 16 个请求响应通道）。**只删记录，不碰文件**
+  ipcMain.handle(CH.HISTORY_CLEAR, () => business(async () => ({ cleared: await clearAllTasks() })))
 }

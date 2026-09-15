@@ -141,6 +141,35 @@ export async function appendTask(task: RenameTask): Promise<boolean> {
   }
 }
 
+/* ── 清空（P2-C · IX-101 / EX-17）──────────────────────────────────── */
+
+/**
+ * 清空**全部**历史记录。
+ *
+ * ★ 红线（数据库设计 §4.7 / 技术方案 §11 遗留项 13）：
+ *   **只删记录，绝不触碰任何文件** —— 本函数里不出现任何 fs 改名调用。
+ *   文案里那句「文件本身不会被删除，也不会被改名」就是这条的对外承诺。
+ *
+ * ★ 落盘失败要回滚内存：否则会出现「界面空了、磁盘还在」——
+ *   用户下次启动记录又冒出来，会以为软件骗他。
+ *
+ * @returns 被清掉的条数（供状态栏文案「已清空全部 N 条历史记录」）
+ */
+export async function clearAllTasks(): Promise<number> {
+  const n = tasks.length
+  if (n === 0) return 0
+
+  const backup = tasks
+  tasks = []
+  try {
+    await persist()
+  } catch (err) {
+    tasks = backup
+    throw err
+  }
+  return n
+}
+
 /* ── 撤销 ──────────────────────────────────────────────────────────── */
 
 function findTask(taskId: string): RenameTask {
