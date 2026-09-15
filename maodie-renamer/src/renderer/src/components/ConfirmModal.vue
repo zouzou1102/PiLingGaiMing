@@ -34,11 +34,21 @@ const confirmLabel = computed(() => {
   >
     <p class="md-confirm__body">{{ ctx.body }}</p>
 
+    <!-- P2-C / EX-17：清空历史且仍有「可撤销」任务时的红色警告块。
+         没有它，用户会在「改错了名 → 想撤销 → 发现历史被自己清了」时永久丢数据。 -->
+    <p v-if="ctx.warning" class="md-modal__warn">{{ ctx.warning }}</p>
+
     <template #foot>
       <button class="md-btn md-btn--secondary" @click="task.confirmNo()">
         {{ ctx.kind === 'rename' ? '再改改' : '取消' }}
       </button>
-      <button class="md-btn md-btn--primary" @click="task.confirmYes()">{{ confirmLabel }}</button>
+      <button
+        class="md-btn"
+        :class="ctx.danger ? 'md-btn--danger' : 'md-btn--primary'"
+        @click="task.confirmYes()"
+      >
+        {{ ctx.confirmLabel ?? confirmLabel }}
+      </button>
     </template>
   </AppModal>
 </template>
@@ -49,5 +59,7 @@ const confirmLabel = computed(() => {
   font-size: 14px;
   line-height: 22px;
   color: var(--md-ink-2);
+  /* 正文里带 \n（清空历史的两句话分段），要按换行渲染 */
+  white-space: pre-line;
 }
 </style>

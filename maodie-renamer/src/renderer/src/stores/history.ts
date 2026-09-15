@@ -11,6 +11,7 @@
 
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { detectEviction } from '@shared/history-detail'
 import type { RenameTask } from '@shared/types'
 
 export const useHistoryStore = defineStore('history', () => {
@@ -37,21 +38,39 @@ export const useHistoryStore = defineStore('history', () => {
     if (!res.ok) return
 
     const next = res.data
-    const nextOldestId = next.length > 0 ? next[next.length - 1].id : null
+    // 检测淘汰：判定逻辑抽到 shared/history-detail（纯函数，被单测钉住）。
+    // ★ 它内部显式排除「本次为空」—— 用户主动清空不许被当成系统淘汰。
+    evictedNotice.value = detectEviction(lastOldestId, lastCount, next)
 
-    // 检测淘汰：上一份的最旧任务不见了，且总数没有增长（不是正常的追加）
-    if (lastOldestId !== null && nextOldestId !== lastOldestId && next.length <= lastCount) {
-      evictedNotice.value = 1
-    }
-
-    lastOldestId = nextOldestId
+    lastOldestId = next.length > 0 ? next[next.length - 1].id : null
     lastCount = next.length
     tasks.value = next
+  }
+
+  /**
+   * 清空历史之后调用（P2-C §2.6）。
+   *
+   * 把基准置回「空」+ 清掉已攒下的淘汰提示 —— 与 `detectEviction` 里的
+   * 「空列表不判淘汰」两侧一起兜住，任一侧漏了都会假报「较旧的记录已被清理」。
+   */
+  function resetEvictionBaseline(): void {
+    lastOldestId = null
+    lastCount = 0
+    evictedNotice.value = 0
+    tasks.value = []
   }
 
   function clearEvictedNotice(): void {
     evictedNotice.value = 0
   }
 
-  return { tasks, loading, evictedNotice, undoableSummary, load, clearEvictedNotice }
+  return {
+    tasks,
+    loading,
+    evictedNotice,
+    undoableSummary,
+    load,
+    clearEvictedNotice,
+    resetEvictionBaseline,
+  }
 })

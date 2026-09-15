@@ -243,6 +243,34 @@ textarea {
   color: var(--md-line-strong);
 }
 
+/* ── P2-C：幽灵**危险**按钮（EL-113 清空历史记录）──────────────────────
+   全软件唯一一个「删掉用户数据」的操作，所以要在视觉上与 `.md-btn--ghost`
+   （「清空列表」用它 —— 那个只移除列表项、不删文件）区分开：
+   底透明 + `bad` 字，悬停才给 `bad-bg`。刻意不用实心红（太醒目、太易误点）。 */
+.md-btn--ghost-danger {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--md-radius-input);
+  background: transparent;
+  color: var(--md-bad);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.md-btn--ghost-danger:hover:not(:disabled) {
+  background: var(--md-bad-bg);
+}
+
+/* ── P2-C：确认弹窗里的红色警告块（EX-17）───────────────────────────── */
+.md-modal__warn {
+  margin: var(--md-space-4) 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--md-bad-bg);
+  color: var(--md-bad);
+  font-size: 12.5px;
+  line-height: 19px;
+}
+
 /* 历史页卡片上的「撤销这一条」 */
 .md-btn--card {
   height: 34px;

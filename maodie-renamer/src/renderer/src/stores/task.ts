@@ -20,7 +20,7 @@ import { playFailure, playSuccess } from '../utils/sound'
 
 export type ModalKind = 'none' | 'result' | 'conflict' | 'confirm' | 'settings'
 
-export type ConfirmKind = 'rename' | 'undoOne' | 'undoAll' | 'clear'
+export type ConfirmKind = 'rename' | 'undoOne' | 'undoAll' | 'clear' | 'clearHistory'
 
 export interface ConfirmContext {
   kind: ConfirmKind
@@ -30,6 +30,12 @@ export interface ConfirmContext {
   taskId?: string
   /** 清空列表时的项数 */
   count?: number
+  /** P2-C：危险操作（清空历史）用 danger 主按钮（`on-danger` 字，对比 4.58:1）*/
+  danger?: boolean
+  /** P2-C：红色警告块文案（EX-17）*/
+  warning?: string
+  /** P2-C：覆盖默认主按钮文案（「清空」/「仍然清空」）*/
+  confirmLabel?: string
 }
 
 export const useTaskStore = defineStore('task', () => {
@@ -278,6 +284,9 @@ export const useTaskStore = defineStore('task', () => {
         files.clear()
         setStatusOverride('列表已清空（文件本身没有被删除）')
         break
+      case 'clearHistory':
+        await runClearHistory()
+        break
     }
   }
 
@@ -323,6 +332,45 @@ export const useTaskStore = defineStore('task', () => {
       count: files.items.length,
     }
     modal.value = 'confirm'
+  }
+
+  /* ── 清空历史（IX-101 / EX-17 · P2-C）────────────────────────────── */
+
+  /**
+   * 点「清空历史记录」（EL-113）。
+   *
+   * ★ 必须**分两支**：有「可撤销」任务时要额外警告 ——
+   *   清空 = 删掉撤销记录 → 那些改名再也撤不回来。
+   *   不做这支会让用户经历「改错了名 → 想撤销 → 发现历史被自己清了」→ 永久丢数据。
+   */
+  function askClearHistory(): void {
+    const n = history.tasks.length
+    if (n === 0) return
+    const undoable = history.undoableSummary.taskCount
+    confirmContext.value = {
+      kind: 'clearHistory',
+      title: '清空历史记录',
+      body: `将删除全部 ${n} 条改名记录。\n文件本身不会被删除，也不会被改名。`,
+      warning:
+        undoable > 0
+          ? `其中 ${undoable} 条改名记录仍然可以撤销。清空后这 ${undoable} 条将无法再还原 —— 只能手动把文件名改回去。`
+          : undefined,
+      danger: true,
+      confirmLabel: undoable > 0 ? '仍然清空' : '清空',
+    }
+    modal.value = 'confirm'
+  }
+
+  async function runClearHistory(): Promise<void> {
+    const res = await window.maodie.history.clear()
+    if (!res.ok) {
+      setStatusOverride('清空没成功，稍后再试试')
+      return
+    }
+    // ★ 先重置淘汰基准再刷新列表：否则「用户主动清空」会被判成系统淘汰，
+    //   状态栏假报「为保证性能，较旧的记录已被清理」（P2-C §2.6）
+    history.resetEvictionBaseline()
+    setStatusOverride(`已清空全部 ${res.data.cleared} 条历史记录，文件未被改动`)
   }
 
   async function runUndoTask(taskId: string): Promise<void> {
@@ -413,6 +461,7 @@ export const useTaskStore = defineStore('task', () => {
     askUndoTask,
     askUndoAll,
     askClear,
+    askClearHistory,
     undoLast,
     closeModal,
     openSettings,
