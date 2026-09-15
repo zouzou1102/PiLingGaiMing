@@ -8,6 +8,7 @@
  */
 
 import { DEFAULT_PREFS, type Prefs } from '@shared/types'
+import { normalizeTheme } from '@shared/theme'
 import { CURRENT_VERSION, MIGRATIONS } from './migrations'
 import { enqueueWrite, isWriteBlocked, readStore, storePath, writeJsonAtomic } from './storage'
 
@@ -42,8 +43,8 @@ function sanitize(raw: Record<string, unknown>): Prefs {
     confirmThreshold: Number.isFinite(confirm)
       ? Math.min(1000, Math.max(1, confirm))
       : DEFAULT_PREFS.confirmThreshold,
-    // 首版只有 light（深色模式是 P2，字段先留着）
-    theme: 'light',
+    // 三态；手改坏的值回落到默认「始终浅色」（P2-A 起不再是写死的 light）
+    theme: normalizeTheme(raw.theme),
   }
 }
 

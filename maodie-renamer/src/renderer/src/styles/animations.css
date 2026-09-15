@@ -132,12 +132,12 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #ffc94d;
+  background: var(--md-confetti-1);
   opacity: 0;
   animation: md-sparkle 1.4s ease-out infinite;
 }
 .md-sparkle:nth-child(2) {
-  background: #ffd98a;
+  background: var(--md-confetti-2);
   animation-delay: 0.35s;
 }
 .md-sparkle:nth-child(3) {
@@ -344,7 +344,7 @@
   gap: var(--md-space-3);
   border: 2px dashed var(--md-orange-accent);
   border-radius: var(--md-radius-card);
-  background: rgba(255, 246, 233, 0.92);
+  background: var(--md-chip-bg);
   color: var(--md-orange-dark);
   font-family: var(--md-font-brand);
   font-size: 20px;
@@ -353,7 +353,7 @@
 
 .md-dropzone--reject {
   border-color: var(--md-bad);
-  background: rgba(253, 242, 241, 0.94);
+  background: var(--md-bad-bg-float);
   color: var(--md-bad);
   font-family: var(--md-font-ui);
   font-size: 14px;
@@ -367,7 +367,7 @@
   inset: 0;
   z-index: 100;
   /* 遮罩覆盖整个窗口（含标题栏）—— 这也是弹窗必须 Teleport 到 body 的原因 */
-  background: rgba(58, 42, 32, 0.45);
+  background: var(--md-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -403,6 +403,14 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: var(--md-space-5);
+}
+
+/* SCR-07 设置弹窗：左侧一行说明 + 右侧按钮，上方带一条分割线 */
+.md-modal__foot--spread {
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--md-line);
+  padding-top: var(--md-space-4);
 }
 
 @keyframes md-modalin {
@@ -450,7 +458,7 @@
 
 .md-filelist__row--conflict,
 .md-filelist__row--invalid {
-  background: #fff7f6;
+  background: var(--md-bad-row-bg);
 }
 
 .md-filelist__row--conflict .md-filelist__name,
@@ -493,7 +501,7 @@
 }
 
 .md-history-card--undone {
-  background: #f7f3ec;
+  background: var(--md-bg-muted);
   box-shadow: none;
   color: var(--md-ink-4);
 }

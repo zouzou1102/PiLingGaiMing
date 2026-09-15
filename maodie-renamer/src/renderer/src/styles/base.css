@@ -91,13 +91,26 @@ textarea {
 }
 
 .md-winbtn:hover {
-  background: rgba(224, 139, 51, 0.12);
+  background: var(--md-brand-tint);
 }
 
 /* 关闭按钮悬停：红底保留；图标**不再刷白** ——
    猫咪切图自带颜色（橘耳 + 深色符号），刷成白色会变剪影，猫就没了。 */
 .md-winbtn--close:hover {
   background: var(--md-bad);
+}
+
+/* P2-A · EL-106 设置入口：滑杆图标，悬停时图标转强调橘（底色与其它按钮同款）。
+   不用齿轮 —— P1 的规则区折叠条已经用了齿轮，同屏两个会混淆。 */
+.md-winbtn--settings {
+  color: var(--md-ink-2);
+  transition:
+    background var(--md-dur-hover) ease,
+    color var(--md-dur-hover) ease;
+}
+
+.md-winbtn--settings:hover {
+  color: var(--md-orange-dark);
 }
 
 /* ══ 图标 ═════════════════════════════════════════════════════════ */
@@ -168,7 +181,8 @@ textarea {
 /* 主按钮 */
 .md-btn--primary {
   background: var(--md-orange-primary);
-  color: #ffffff;
+  /* 深棕 on 橘 = 8.3:1（原白字只有 2.03:1，两个主题统一改深棕）*/
+  color: var(--md-on-brand);
   box-shadow: var(--md-shadow-card);
 }
 .md-btn--primary:hover:not(:disabled) {
@@ -182,7 +196,7 @@ textarea {
 /* 执行中：文案变「取消」，底色变红（设计规范 §4.1）*/
 .md-btn--danger {
   background: var(--md-bad);
-  color: #ffffff;
+  color: var(--md-on-danger);
   box-shadow: var(--md-shadow-card);
 }
 .md-btn--danger:hover:not(:disabled) {
@@ -200,7 +214,7 @@ textarea {
   padding: 0 20px;
 }
 .md-btn--secondary:hover:not(:disabled) {
-  background: #fff3e2;
+  background: var(--md-orange-soft);
   border-color: var(--md-orange-accent);
   color: var(--md-orange-dark);
 }
@@ -234,7 +248,7 @@ textarea {
   height: 34px;
   padding: 0 16px;
   border-radius: var(--md-radius-input);
-  background: #fff3e2;
+  background: var(--md-orange-soft);
   color: var(--md-orange-dark);
   font-size: 13px;
   font-weight: 600;
@@ -267,12 +281,12 @@ textarea {
 .md-input:focus {
   outline: none;
   border: 2px solid var(--md-orange-primary);
-  box-shadow: 0 0 8px 2px rgba(245, 166, 35, 0.18);
+  box-shadow: var(--md-focus-ring);
 }
 
 .md-input:disabled {
-  background: #f7f3ec;
-  border-color: #eae3d8;
+  background: var(--md-bg-muted);
+  border-color: var(--md-neutral-bg);
   color: var(--md-ink-4);
 }
 
@@ -295,7 +309,7 @@ textarea {
 }
 
 .md-select:disabled {
-  background: #f7f3ec;
+  background: var(--md-bg-muted);
   color: var(--md-ink-4);
   cursor: not-allowed;
 }
@@ -342,7 +356,7 @@ textarea {
   opacity: 0;
 }
 .md-check__box .md-icon > svg path {
-  fill: #ffffff;
+  fill: var(--md-on-brand);
 }
 
 .md-check input:checked + .md-check__box {
@@ -355,7 +369,7 @@ textarea {
 
 .md-check input:disabled + .md-check__box {
   background: var(--md-bg-sunken);
-  border-color: #e0d6c8;
+  border-color: var(--md-line-disabled);
 }
 .md-check input:disabled ~ .md-check__label {
   color: var(--md-ink-4);
@@ -392,6 +406,9 @@ textarea {
   position: relative;
   transition: background var(--md-dur-hover) ease;
   flex: 0 0 auto;
+  /* 深色下轨道几乎融进卡片（对比约 1.6:1），补一圈描边。
+     浅色值是 transparent，所以这一行对浅色观感零影响。*/
+  box-shadow: 0 0 0 1px var(--md-switch-track-line);
 }
 
 .md-switch__thumb {
@@ -401,8 +418,8 @@ textarea {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  background: var(--md-switch-thumb);
+  box-shadow: var(--md-shadow-thumb);
   transition: transform var(--md-dur-hover) var(--md-ease-pop);
 }
 

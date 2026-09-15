@@ -7,8 +7,10 @@
 
 import { app, ipcMain } from 'electron'
 import { CH } from '@shared/channels'
+import { isTheme } from '@shared/theme'
 import type { AppInfo, Prefs } from '@shared/types'
 import { getPrefs, setPrefs } from '../services/prefs-store'
+import { applyThemeSource } from '../services/theme'
 
 export function getAppInfo(): AppInfo {
   return {
@@ -30,11 +32,20 @@ function sanitizePatch(raw: unknown): Partial<Prefs> {
   if (typeof src.soundEnabled === 'boolean') out.soundEnabled = src.soundEnabled
   if (typeof src.reduceMotion === 'boolean') out.reduceMotion = src.reduceMotion
   if (typeof src.confirmThreshold === 'number') out.confirmThreshold = src.confirmThreshold
+  // 主题：只收三个合法值，其余一律忽略（P2-A 起 theme 才真的能改 ——
+  // 之前这里没这个字段，渲染层改主题会被静默丢掉）
+  if (isTheme(src.theme)) out.theme = src.theme
   return out
 }
 
 export function registerAppIpc(): void {
   ipcMain.handle(CH.APP_GET_INFO, () => getAppInfo())
   ipcMain.handle(CH.APP_GET_PREFS, () => getPrefs())
-  ipcMain.handle(CH.APP_SET_PREFS, (_e, patch: unknown) => setPrefs(sanitizePatch(patch)))
+  ipcMain.handle(CH.APP_SET_PREFS, async (_e, patch: unknown) => {
+    const next = await setPrefs(sanitizePatch(patch))
+    // 主题变更要立刻交给 Electron：渲染层的 prefers-color-scheme 会跟着变，
+    // 所以**不需要**新增「主题变了」的 IPC 广播（接口文档只留了 3 个事件通道）。
+    applyThemeSource(next.theme)
+    return next
+  })
 }

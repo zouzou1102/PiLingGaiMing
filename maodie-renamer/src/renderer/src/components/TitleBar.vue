@@ -9,9 +9,16 @@
  * 三个按钮的图标是**猫咪切图**（设计规范 §R-01 定稿：猫脸 + 功能符号），
  * 走 `resources/cats/ui-btn-*.svg` 的「同名文件替换」约定，换图不用改代码。
  * EL-003 最大化后换成 `restore`（还原态），不再一直显示最大化图标。
+ *
+ * P2-A 起这一行多了第四个按钮：EL-106 设置入口（在最左边，图标来自
+ * `assets/icons/icon-设置.svg`，见模板注释）。
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import { windowButtonSvg } from '../assets/cats'
+import { ICONS } from '../assets/icons'
+import { useTaskStore } from '../stores/task'
+
+const task = useTaskStore()
 
 const BTN_ICON = {
   minimize: windowButtonSvg('minimize'),
@@ -51,6 +58,12 @@ function close(): void {
   <header class="md-titlebar">
     <span class="md-titlebar__brand">耄耋改名</span>
     <div class="md-titlebar__btns">
+      <!-- EL-106 设置入口（P2-A）。放在窗口三键**左侧**，与三键同尺寸。
+           图标是「滑杆」不是齿轮 —— P1 的规则区折叠条已经用了齿轮，
+           同屏两个齿轮会让人以为是同一个东西（设计确认 §2）。 -->
+      <button class="md-winbtn md-winbtn--settings" title="设置" aria-label="设置" @click="task.openSettings()">
+        <span class="md-icon md-icon--14" aria-hidden="true" v-html="ICONS.settings" />
+      </button>
       <button class="md-winbtn" title="最小化" aria-label="最小化" @click="minimize">
         <span class="md-icon md-icon--16" aria-hidden="true" v-html="BTN_ICON.minimize" />
       </button>
