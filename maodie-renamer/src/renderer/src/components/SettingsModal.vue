@@ -16,8 +16,10 @@
  * 『减少动画』开关」，但此前界面上根本没有设置入口 —— 开关写好了、也能生效，
  * 用户却打不开。这个弹窗把它补上了。
  */
+import { onMounted, ref, computed } from 'vue'
 import AppModal from './AppModal.vue'
 import { THEME_OPTIONS } from '@shared/labels'
+import type { AppInfo } from '@shared/types'
 import type { Theme } from '@shared/theme'
 import { usePrefsStore } from '../stores/prefs'
 import { useTaskStore } from '../stores/task'
@@ -27,6 +29,30 @@ const task = useTaskStore()
 
 function setTheme(t: Theme): void {
   void prefs.patch({ theme: t })
+}
+
+/* ── P2-C · EL-114 ~ EL-116 命令行入口 ────────────────────────────────
+ * 折起 / 展开是**纯 UI 状态**，不写任何偏好（IX-102）。
+ * 「复制程序路径」解决的是进阶用户最大的障碍 —— **不知道程序装在哪**
+ * （Electron 默认装在用户目录深处）。这一条比写一百行文档有用。 */
+const appInfo = ref<AppInfo | null>(null)
+const cliOpen = ref(false)
+
+onMounted(async () => {
+  appInfo.value = await window.maodie.app.getInfo()
+})
+
+/** 只给一条示例命令（决策 4），并带上本机完整程序路径 */
+const cliCommand = computed(() => {
+  const exe = appInfo.value?.execPath ?? 'maodie.exe'
+  return `${exe} --rename --dir "D:\\下载\\素材" --delete "广告" --yes`
+})
+
+async function copyText(text: string, what: string): Promise<void> {
+  if (text === '') return
+  // 复制成功给一次轻提示（复用既有提示位，**不弹窗**）；不新增 IPC 通道
+  await navigator.clipboard.writeText(text)
+  task.setStatusOverride(`${what}已复制`)
 }
 </script>
 
@@ -86,6 +112,37 @@ function setTheme(t: Theme): void {
         </label>
       </div>
       <p class="md-hint">开启后猫咪状态切换只换表情、不做位移，动效时长归零。</p>
+
+      <!-- EL-114 命令行（P2-C）。折叠行：标签 + 右侧箭头；折起 / 展开是纯 UI 状态 -->
+      <div class="md-settings__row">
+        <button
+          class="md-cli__bar"
+          :aria-expanded="cliOpen"
+          @click="cliOpen = !cliOpen"
+        >
+          <span class="md-settings__label">命令行</span>
+          <span class="md-cli__caret" :class="{ 'md-cli__caret--open': cliOpen }" aria-hidden="true" />
+        </button>
+      </div>
+
+      <!-- EL-115 说明 + 代码块；EL-116 复制按钮组 -->
+      <div v-if="cliOpen" class="md-cli__body">
+        <p class="md-cli__desc">给进阶用户用脚本批量改名。在命令行（或 .bat 文件）里跑下面这条：</p>
+        <p class="md-cli__code">{{ cliCommand }}</p>
+        <div class="md-cli__btns">
+          <button class="md-btn md-btn--secondary" @click="copyText(cliCommand, '命令')">复制命令</button>
+          <button
+            class="md-btn md-btn--secondary"
+            @click="copyText(appInfo?.execPath ?? '', '程序路径')"
+          >
+            复制程序路径
+          </button>
+        </div>
+        <p class="md-cli__hint">
+          「复制命令」会自动带上你机器上的完整程序路径。默认只打印将要做的改动，
+          加 <code>--yes</code> 才真正改名。
+        </p>
+      </div>
     </div>
 
     <template #foot>
@@ -124,5 +181,77 @@ function setTheme(t: Theme): void {
 /* <p> 的浏览器默认外边距在这套纵向节奏里会多出一截 */
 .md-hint {
   margin: 0;
+}
+
+/* ── P2-C · 命令行入口（EL-114 ~ EL-116，设计 §3.2）──────────────────── */
+
+.md-cli__bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--md-ink-1);
+}
+
+.md-cli__caret {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform var(--md-dur-hover) var(--md-ease-pop);
+}
+
+.md-cli__caret--open {
+  transform: rotate(180deg);
+}
+
+.md-cli__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-2);
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--md-bg-warm);
+}
+
+.md-cli__desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--md-ink-2);
+}
+
+/* 命令可能很长：**横向滚动、不换行**，否则会被折成两行看不清 */
+.md-cli__code {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--md-bg-sunken);
+  font-family: var(--md-font-num);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--md-ink-1);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.md-cli__btns {
+  display: flex;
+  gap: var(--md-space-2);
+}
+
+.md-cli__hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 18px;
+  color: var(--md-ink-4);
+}
+
+.md-cli__hint code {
+  font-family: var(--md-font-num);
 }
 </style>
