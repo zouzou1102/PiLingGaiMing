@@ -33,6 +33,9 @@ export const CH = {
   HISTORY_LIST: 'md:history:list',
   HISTORY_UNDO_TASK: 'md:history:undoTask',
   HISTORY_UNDO_ALL: 'md:history:undoAll',
+  // P2-C（DEC-12）：清空历史记录。**不复用撤销通道** —— 「清空」不是「撤销」，
+  // 硬塞进现有通道会把语义搞乱（P2-C §4）。请求响应通道 15 → 16，事件通道仍 3 个。
+  HISTORY_CLEAR: 'md:history:clear',
 
   /* ── 事件通道（main → renderer）── */
   EV_RENAME_PROGRESS: 'md:rename:progress',

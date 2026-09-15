@@ -325,6 +325,20 @@ export interface AppInfo {
   arch: 'x64' | 'arm64'
   userDataPath: string
   isDev: boolean
+  /**
+   * ★ P2-C：可执行文件路径（`process.execPath`），供设置里「复制程序路径」用。
+   *
+   * 加字段比加通道轻（P2-C §4）。⚠️ 未打包时它是 Electron 引擎的路径而不是
+   * `maodie.exe` —— 那正是「复制程序路径」要解决的问题，但**该命令只有打包后才可直接用**。
+   */
+  execPath: string
+}
+
+/* ══ 清空历史（md:history:clear · P2-C / DEC-12）══════════════════════ */
+
+export interface ClearHistoryResult {
+  /** 被清掉的记录条数（供状态栏文案「已清空全部 N 条历史记录」）*/
+  cleared: number
 }
 
 export interface WindowState {
@@ -427,6 +441,8 @@ export interface MaoDieAPI {
     list(): Promise<MdResult<RenameTask[]>>
     undoTask(req: { taskId: string }): Promise<MdResult<UndoResult>>
     undoAll(): Promise<MdResult<UndoAllResult>>
+    /** ★ P2-C：清空全部历史记录。**只删记录，绝不触碰任何文件** */
+    clear(): Promise<MdResult<ClearHistoryResult>>
   }
 }
 

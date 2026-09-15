@@ -11,6 +11,7 @@ import { CH } from '@shared/channels'
 import type {
   AppInfo,
   CancelResult,
+  ClearHistoryResult,
   ExecuteRequest,
   ExecuteResult,
   MaoDieAPI,
@@ -78,6 +79,8 @@ export function buildMaodieApi(bridge: PreloadBridge): MaoDieAPI {
       undoTask: (req: { taskId: string }) =>
         bridge.invoke(CH.HISTORY_UNDO_TASK, req) as Promise<MdResult<UndoResult>>,
       undoAll: () => bridge.invoke(CH.HISTORY_UNDO_ALL) as Promise<MdResult<UndoAllResult>>,
+      // P2-C：清空历史。**不加新命名空间**（仍是 5 个），只是 history 下多一个方法
+      clear: () => bridge.invoke(CH.HISTORY_CLEAR) as Promise<MdResult<ClearHistoryResult>>,
     },
   }
 
