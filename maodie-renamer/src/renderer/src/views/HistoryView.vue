@@ -57,11 +57,23 @@ onMounted(() => void history.load())
       </template>
     </div>
 
-    <footer class="md-history__foot">
+    <footer class="md-history__foot md-history__foot--spread">
       <p class="md-hint">
         为保证性能，最多保留最近 20 次改名记录（明细总量上限 5 万条）；
         超出时从最旧的一次整条清理，最新一次永不清理。撤销只改名字，不碰文件内容。
       </p>
+      <!-- EL-113 清空历史记录（P2-C）。历史里存的是**完整文件路径**，
+           所以这是一个真实的隐私诉求 —— 此前用户只能自己去 %APPDATA% 翻。
+           形态：幽灵危险按钮。不用实心红（太易误点），也不用普通灰幽灵
+           （那会和「清空列表」混在一起，而那个只移除列表项、不删数据）。
+           改名进行中禁用：别把正在跑的那批改名的记录清掉。 -->
+      <button
+        class="md-btn md-btn--ghost-danger"
+        :disabled="history.tasks.length === 0 || task.running"
+        @click="task.askClearHistory()"
+      >
+        清空历史记录
+      </button>
     </footer>
   </div>
 </template>
@@ -114,6 +126,18 @@ onMounted(() => void history.load())
 .md-history__foot {
   flex: 0 0 auto;
   padding-bottom: var(--md-space-3);
+}
+
+/* P2-C：左说明 + 右「清空历史记录」（EL-113）。说明会自动换行，按钮不压缩 */
+.md-history__foot--spread {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-space-3);
+}
+
+.md-history__foot--spread .md-btn--ghost-danger {
+  flex: 0 0 auto;
 }
 
 .md-history__foot .md-hint {

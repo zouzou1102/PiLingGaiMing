@@ -47,7 +47,55 @@ process.env.APP_DATA_DIR = path.join(tmpRoot, 'data');
 fs.mkdirSync(process.env.APP_DATA_DIR, { recursive: true });
 if (process.env.CI) app.commandLine.appendSwitch('disable-gpu');
 
-// 真实数据目录（用于"没碰真实数据"核验）
+// ── P2-C：历史数据夹具 ──────────────────────────────────────────────────
+// 要验「明细就地展开 / 清空历史」，就得先有历史记录。两条路：
+//   ① 真的走一遍改名 → 冒烟里要造 5000 个文件才能验渲染上限，太贵；
+//   ② **直接写进隔离目录的 history.json** ← 选它。
+// 两种世界用一个环境变量切换（两支确认文案要分别验）：
+//   SMOKE_HISTORY=withActive（默认）有「可撤销」任务 → 验安全阀分支
+//   SMOKE_HISTORY=allUndone        全部已撤销     → 验无警告分支
+const HISTORY_MODE = process.env.SMOKE_HISTORY === 'allUndone' ? 'allUndone' : 'withActive';
+const HISTORY_DIR = path.join(tmpRoot, 'MaoDieRenamer'); // = 主进程算出来的 userData
+fs.mkdirSync(HISTORY_DIR, { recursive: true });
+
+function mkTask(id, status, count, createdAt, summary) {
+  return {
+    id,
+    createdAt,
+    date: '2026-09-15',
+    ruleSummary: summary,
+    status,
+    undoneAt: status === 'undone' ? createdAt + 60000 : null,
+    // ★ entries 只记「改名成功」的项（types.ts 的定义），所以这里每个都是真改了名的
+    entries: Array.from({ length: count }, (_, i) => ({
+      dirPath: path.join(tmpRoot, 'samples'),
+      fromName: `广告素材-${String(i + 1).padStart(4, '0')}.png`,
+      toName: `素材-${String(i + 1).padStart(4, '0')}.png`,
+    })),
+    counts: { total: count, success: count, skipped: 0, invalid: 0, failed: 0 },
+  };
+}
+
+const base = Date.now();
+const FIXTURE_TASKS = [
+  // 3 项的小任务：验 TC-33 明细展开（"查看全部 3 项"）
+  mkTask('smoke-t1', HISTORY_MODE === 'allUndone' ? 'undone' : 'active', 3, base - 3000, '删除「广告」'),
+  // 已撤销的卡片：验「已撤销的也能展开」
+  mkTask('smoke-t2', 'undone', 3, base - 2000, '替换「旧」→「新」'),
+  // 5000 项的大任务：验 TC-34 渲染上限（只渲染 100 条 + 「还有 4900 项未显示」）
+  mkTask('smoke-t3', HISTORY_MODE === 'allUndone' ? 'undone' : 'active', 5000, base - 1000, '前缀「{d}-」'),
+];
+fs.writeFileSync(
+  path.join(HISTORY_DIR, 'history.json'),
+  JSON.stringify(
+    { schemaVersion: 1, appVersion: '0.0.1-smoke', payload: { tasks: FIXTURE_TASKS } },
+    null,
+    2,
+  ),
+  'utf8',
+);
+console.log(`历史夹具（${HISTORY_MODE}）：3 条记录（3 项 / 3 项已撤销 / 5000 项）`);
+
 const REAL_DATA_DIR = process.env.REAL_DATA_DIR
   || path.join(process.env.APPDATA || '', 'MaoDieRenamer');
 const realBefore = S.fingerprint(REAL_DATA_DIR);
@@ -455,7 +503,121 @@ const FEATURES = [
      .seeAttr('html', 'data-reduce-motion', 'false', '再点一下能关回去（不留脏状态）')
      .click('.md-modal__foot--spread .md-btn--primary')
      .waitUntil("!document.querySelector('.md-modal')", 8000)
-     .seeStyle('.md-tab', 'transitionDuration', '0.18s', '关掉「减少动画」后过渡恢复 180ms')
+      .seeStyle('.md-tab', 'transitionDuration', '0.18s', '关掉「减少动画」后过渡恢复 180ms')
+  ),
+
+  /* ══ P2-C（历史完整版 + 命令行入口）══════════════════════════════════
+     夹具里 3 条记录、最新在前，所以卡片次序是：
+       nth-child(1) = 5000 项的大任务   nth-child(2) = 3 项（已撤销）   nth-child(3) = 3 项
+     注释里标「★」的，是本批最该被守住的那几条。
+
+     ⚠️ 本段**一律不用 `document.body.innerText` 做断言**：
+     冒烟自己的操作横幅就挂在 body 里，横幅显示的是当前步骤的说明文字 ——
+     断言文案里一旦出现要判定的那句话，就会「被自己喂饱」而永远通过（或永远失败）。
+     实测踩过：TC-37 找「较旧的记录已被清理」，慢跑必红、快跑却绿
+     （因为横幅刷新需要一点时间）。要读就读**具体元素**（状态栏那一块）。
+     */
+
+  feature('P2-C IX-102/103 设置里的命令行入口：展开 → 命令带本机路径 → 复制成功给轻提示', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .notSee('.md-cli__body', '命令行的用法块默认折起（折起是纯 UI 状态，不写偏好）')
+     .click('.md-cli__bar')
+     .waitUntil("!!document.querySelector('.md-cli__body')", 8000)
+     .see('.md-cli__code', '展开后显示一条可复制的示例命令（只给一条，决策 4）')
+     .seeContains('.md-cli__code', '--rename', '命令里有 --rename')
+     .seeContains('.md-cli__code', '--delete', '示例是删除模式')
+     .seeContains('.md-cli__code', '--yes', '★ 命令里有 --yes —— 默认只读、必须显式加才会真改')
+     .seeThat("document.querySelector('.md-cli__code').innerText.includes('.exe')", true,
+       '★ 命令带的是**本机完整程序路径**（取自 AppInfo.execPath）—— 进阶用户最大的障碍就是不知道程序装在哪')
+     .click('.md-cli__btns .md-btn--secondary:first-child')
+     .waitUntil("(() => { const el = document.querySelector('.md-statusbar__text');"
+       + " return !!el && el.innerText.includes('已复制'); })()", 8000)
+     .seeContains('.md-statusbar__text', '命令已复制',
+       '复制成功给一次轻提示（复用既有提示位、不弹窗）—— 提示出现即说明剪贴板真的写进去了')
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+  ),
+
+  feature('P2-C TC-33 明细就地展开：序号与「原名 → 新名」逐条正确，再点收回', (c) =>
+    c.click('.md-actionbar .md-btn--secondary')
+     .waitUntil("!!document.querySelector('.md-history')", 8000)
+     .seeCount('.md-history-card', 3, '历史页应有 3 条记录（本轮的夹具）')
+     .notSee('.md-detail__list', '明细默认是收起的')
+     .click('.md-history__body .md-history-card:nth-child(3) .md-detail__bar')
+     .waitUntil("!!document.querySelector('.md-history__body .md-history-card:nth-child(3) .md-detail__list')", 8000)
+     .seeCount('.md-history__body .md-history-card:nth-child(3) .md-detail__row', 3, '3 项明细逐行渲染')
+     .seeText(
+       '.md-history__body .md-history-card:nth-child(3) .md-detail__row:first-child .md-detail__pair',
+       '广告素材-0001.png → 素材-0001.png',
+       '第一行就是「原名 → 新名」',
+     )
+     .seeText('.md-history__body .md-history-card:nth-child(3) .md-detail__row:first-child .md-detail__no',
+       '1', '序号从 1 开始')
+     .seeStyle('.md-history__body .md-history-card:nth-child(3) .md-detail__list', 'maxHeight', '220px',
+       '容器最大高 220px（设计 §1.3），超出滚动')
+     .seeContains('.md-history__body .md-history-card:nth-child(3) .md-detail__bar', '收起',
+       '展开后文字变「收起」')
+     .click('.md-history__body .md-history-card:nth-child(3) .md-detail__bar')
+     .notSee('.md-history__body .md-history-card:nth-child(3) .md-detail__list', '再点一次能收回')
+  ),
+
+  feature('P2-C TC-33b 「已撤销」的卡片同样能展开（撤销之后明细仍有参考价值）', (c) =>
+    c.click('.md-history__body .md-history-card:nth-child(2) .md-detail__bar')
+     .waitUntil("!!document.querySelector('.md-history__body .md-history-card:nth-child(2) .md-detail__list')", 8000)
+     .seeCount('.md-history__body .md-history-card:nth-child(2) .md-detail__row', 3)
+     .seeContains('.md-history__body .md-history-card:nth-child(2)', '已撤销', '确认这是一张已撤销的卡片')
+     .notSee('.md-history__body .md-history-card:nth-child(2) .md-btn--card',
+       '已撤销的卡片不显示「撤销这一条」')
+     .click('.md-history__body .md-history-card:nth-child(2) .md-detail__bar')
+  ),
+
+  feature('P2-C TC-34 明细渲染上限：5000 条只渲染 100 行，末行如实说还有多少没显示', (c) =>
+    c.click('.md-history__body .md-history-card:nth-child(1) .md-detail__bar')
+     .waitUntil("!!document.querySelector('.md-history__body .md-history-card:nth-child(1) .md-detail__list')", 8000)
+     .seeCount('.md-history__body .md-history-card:nth-child(1) .md-detail__row', 100,
+       '★ 只渲染前 100 条（设计 §1.4 取舍 1：几千条全渲染会卡；没上虚拟滚动是刻意的）')
+     .seeText('.md-history__body .md-history-card:nth-child(1) .md-detail__more',
+       '还有 4900 项未显示（共 5000 项）', '末行如实告诉用户还有多少没显示，不是默默截断')
+     .click('.md-history__body .md-history-card:nth-child(1) .md-detail__bar')
+  ),
+
+  // 两支确认文案要分别验，用夹具模式切换（同一轮里只可能有一种状态）
+  ...(HISTORY_MODE === 'allUndone'
+    ? [
+        feature('P2-C TC-35 清空历史 · 无警告分支（所有任务都已撤销）', (c) =>
+          c.click('.md-history__foot .md-btn--ghost-danger')
+           .waitUntil(MODAL_VISIBLE, 8000)
+           .notSee('.md-modal__warn', '★ 没有「可撤销」任务时**不该**出现红色警告块')
+           .seeText('.md-modal__foot .md-btn--danger', '清空', '主按钮就是「清空」')
+           .seeContains('.md-confirm__body', '文件本身不会被删除',
+             '正文必须写清「不删文件」，否则用户会以为「清空历史 = 删文件」而不敢用')
+        ),
+      ]
+    : [
+        feature('P2-C TC-36 清空历史 · 安全阀（存在可撤销任务）', (c) =>
+          c.click('.md-history__foot .md-btn--ghost-danger')
+           .waitUntil(MODAL_VISIBLE, 8000)
+           .see('.md-modal__warn', '★ 红色警告块必须出现（EX-17）')
+           .seeContains('.md-modal__warn', '仍然可以撤销', '警告里写明「N 条仍可撤销」')
+           .seeContains('.md-modal__warn', '无法再还原', '并写明「清空后无法还原，只能手动改回去」')
+           .seeText('.md-modal__foot .md-btn--danger', '仍然清空', '主按钮文案改成「仍然清空」')
+           .seeStyle('.md-modal__foot .md-btn--danger', 'backgroundColor', 'rgb(229, 84, 75)',
+             '主按钮底色是危险色 --md-bad #E5544B（字用 on-danger 深棕，4.58:1 达标）')
+           .seeContains('.md-confirm__body', '文件本身不会被删除',
+             '正文必须写清「不删文件」，否则用户会以为「清空历史 = 删文件」而不敢用')
+        ),
+      ]),
+
+  feature('P2-C TC-37 清空后不误报淘汰：状态栏说「已清空」而不是「较旧的记录已被清理」', (c) =>
+    c.click('.md-modal__foot .md-btn--danger')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .waitUntil("(() => { const el = document.querySelector('.md-statusbar__text');"
+       + " return !!el && el.innerText.includes('已清空全部'); })()", 8000)
+     .seeContains('.md-statusbar__text', '文件未被改动', '状态栏文案要写明「文件未被改动」（只删记录）')
+     // ★ 读的是**状态栏那个元素**，不是 body.innerText（见本段开头那段警告）
+     .notSee('.md-statusbar__notice', '★ 清空后不该出现淘汰提示：用户自己点的清空不是系统淘汰（P2-C §2.6）')
+     .seeContains('.md-history__empty', '还没有改过名呢', '清空后列表走既有空态')
   ),
 ];
 

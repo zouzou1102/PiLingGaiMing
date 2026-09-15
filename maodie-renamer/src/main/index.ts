@@ -1,10 +1,13 @@
 /**
  * 主进程入口 —— app 生命周期、单实例锁、存储初始化、窗口创建。
  *
- * ⚠ 两处顺序要求不能动：
+ * ⚠ 三处顺序要求不能动：
  *  1. `app.setPath('userData', ...)` 必须在**任何** `app.getPath('userData')`
  *     之前执行（包括 storage 的初始化），否则不生效。
- *  2. `app.requestSingleInstanceLock()` 必须在窗口创建之前 —— 两个实例同时改
+ *  2. 命令行模式的分流必须在 `app.requestSingleInstanceLock()` **之前** ——
+ *     否则用户开着界面时再跑命令行，第二个实例会拿不到锁直接 quit，
+ *     命令**静默什么也不做**、还没有任何提示（P2-C · GAP-2）。
+ *  3. `app.requestSingleInstanceLock()` 必须在窗口创建之前 —— 两个实例同时改
  *     同一批文件会绕过进程内的写入队列。
  */
 
@@ -12,6 +15,7 @@ import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { CH } from '@shared/channels'
 import { USER_DATA_DIR_NAME } from '@shared/constants'
+import { cliArgsFrom, isCliInvocation, runCliAsMain } from './cli'
 import { registerAllIpc } from './ipc'
 import { buildAppMenu } from './menu'
 import { loadHistory } from './services/history-store'
@@ -27,20 +31,37 @@ import { createMainWindow, getMainWindow, hardenSession, hardenWebContents } fro
    用 setPath 而不是 setName —— 后者会连带改掉快捷方式名等显示名称。 */
 app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))
 
-/* ── 2. 单实例锁 ─────────────────────────────────────────────────────── */
-const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
-  app.quit()
-} else {
-  app.on('second-instance', () => {
-    const win = getMainWindow()
-    if (win) {
-      if (win.isMinimized()) win.restore()
-      win.focus()
-    }
+/* ── 2. 命令行模式分流（P2-C · F-15）─────────────────────────────────────
+   必须排在单实例锁**之前**：否则开着界面时跑命令行会被锁挡掉、且毫无提示。
+   命令行自己会去抢锁，抢不到就明确报「请先关闭窗口」并以退出码 2 结束。 */
+const cliArgs = cliArgsFrom(process.argv)
+if (isCliInvocation(cliArgs)) {
+  // 兜底：命令行里出错必须**说话并退出**，绝不能静默挂住 ——
+  // 「命令跑了但什么也没发生」正是本批要消灭的体验。
+  void runCliAsMain(cliArgs).catch((err: unknown) => {
+    process.stderr.write(`命令行模式出错：${err instanceof Error ? err.message : String(err)}\n`)
+    app.exit(2)
   })
+} else {
+  startGui()
+}
 
-  void bootstrap()
+function startGui(): void {
+  /* ── 3. 单实例锁 ───────────────────────────────────────────────────── */
+  const gotLock = app.requestSingleInstanceLock()
+  if (!gotLock) {
+    app.quit()
+  } else {
+    app.on('second-instance', () => {
+      const win = getMainWindow()
+      if (win) {
+        if (win.isMinimized()) win.restore()
+        win.focus()
+      }
+    })
+
+    void bootstrap()
+  }
 }
 
 async function bootstrap(): Promise<void> {

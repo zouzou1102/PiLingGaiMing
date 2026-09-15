@@ -21,6 +21,9 @@ export function getAppInfo(): AppInfo {
     arch: process.arch === 'arm64' ? 'arm64' : 'x64',
     userDataPath: app.getPath('userData'),
     isDev: !app.isPackaged,
+    // P2-C：设置里「复制程序路径」用。加字段比加通道轻（P2-C §4）。
+    // ⚠️ 未打包时它是 Electron 引擎的路径，那条示例命令要先打包成 exe 才可直接用。
+    execPath: process.execPath,
   }
 }
 
