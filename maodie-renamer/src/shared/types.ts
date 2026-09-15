@@ -87,6 +87,8 @@ export interface FileItem {
 export type RuleMode = 'delete' | 'replace' | 'rule'
 export type SeqPosition = 'prefix' | 'suffix'
 export type DateFormat = 'YYYY-MM-DD' | 'YYYYMMDD' | 'YYYY年MM月DD日'
+/** F-11 大小写转换。'capitalize' = 只把主体第一个字符转大写、其余保持原样 */
+export type CaseTransform = 'none' | 'lower' | 'upper' | 'capitalize'
 
 export interface RuleConfig {
   mode: RuleMode
@@ -94,6 +96,10 @@ export interface RuleConfig {
   caseSensitive: boolean
   /** 对应 EL-055。默认 false = 冲突跳过（DEC-05） */
   autoResolveConflict: boolean
+  /** F-10：正则匹配（仅删除 / 替换模式生效）。默认 false —— 关闭时与 P0 逐字节一致 */
+  regexEnabled: boolean
+  /** F-11：大小写转换。默认 'none' —— 只作用于新名主体，扩展名永不动 */
+  caseTransform: CaseTransform
   delete: { text: string }
   replace: { find: string; to: string }
   rule: {
@@ -121,6 +127,8 @@ export const DEFAULT_RULE: RuleConfig = {
   mode: 'delete',
   caseSensitive: false,
   autoResolveConflict: false,
+  regexEnabled: false,
+  caseTransform: 'none',
   delete: { text: '' },
   replace: { find: '', to: '' },
   rule: {

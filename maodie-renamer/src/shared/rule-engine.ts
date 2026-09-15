@@ -9,7 +9,7 @@
  *    这样同一个函数在测试里能给出确定结果。
  */
 
-import type { DateFormat, RuleConfig } from './types'
+import type { CaseTransform, DateFormat, RuleConfig } from './types'
 import type { NameParts } from './name-split'
 
 export interface RuleContext {
@@ -85,8 +85,94 @@ function spliceAll(
   return out
 }
 
+/* ── F-10 正则匹配 ──────────────────────────────────────────────────── */
+
+/** pattern 长度上限（EX-16：挡掉明显的回溯爆炸输入，纯兜底）*/
+export const REGEX_MAX_LENGTH = 200
+
+export interface RegexCompileResult {
+  /** 合法时的正则对象；空 / 非法时为 null */
+  regex: RegExp | null
+  /** 非法时的中文原因；合法或空 pattern 时为 null */
+  error: string | null
+}
+
+/** 把运行时的英文正则报错映射成一句中文（不穷举，识别不了的给通用文案）*/
+function mapRegexError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (/Unterminated group/.test(msg)) return '正则表达式不完整：缺少右括号 )'
+  if (/Unmatched/.test(msg)) return '正则表达式不完整：多了一个右括号 )'
+  if (/Unterminated character class/.test(msg)) return '正则表达式不完整：缺少右方括号 ]'
+  if (/Nothing to repeat/.test(msg)) return '正则表达式不完整：重复符号（* + ?）前面缺内容'
+  if (/Invalid escape/.test(msg)) return '正则表达式里有无效的转义'
+  if (/Invalid group/.test(msg)) return '正则表达式里的分组写法不正确'
+  return '正则表达式不合法'
+}
+
+/**
+ * 编译正则。空 pattern 视为「规则不生效」（不是错误）—— 与 P0 的空规则一致。
+ * 供**引擎与界面校验共用**：界面靠它给出红框原因，引擎靠它决定是否降级为「不改」。
+ */
+export function compileRegex(pattern: string, caseSensitive: boolean): RegexCompileResult {
+  if (pattern === '') return { regex: null, error: null }
+  if (pattern.length > REGEX_MAX_LENGTH) {
+    return { regex: null, error: `正则表达式太长了（最多 ${REGEX_MAX_LENGTH} 个字符）` }
+  }
+  try {
+    return { regex: new RegExp(pattern, caseSensitive ? '' : 'i'), error: null }
+  } catch (err) {
+    return { regex: null, error: mapRegexError(err) }
+  }
+}
+
+/**
+ * 正则的「全部出现位置」替换（结构同 spliceAll，逐段切片拼接）。
+ * `replacement === null` 等价于按正则删除。
+ *
+ * 用 `exec` 循环而不是 `String.replace` 的理由：替换串里要支持 `$0`（整体匹配）——
+ * JS 原生只认 `$&`，`$0` 会被当字面量，与设计不一致。
+ */
+function spliceAllRegex(
+  stem: string,
+  pattern: string,
+  replacement: string | null,
+  caseSensitive: boolean,
+): string {
+  const re = new RegExp(pattern, caseSensitive ? 'g' : 'gi')
+  let out = ''
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(stem)) !== null) {
+    const match = m
+    out += stem.slice(last, match.index)
+    if (replacement !== null) {
+      out += replacement.replace(/\$(\d{1,2})/g, (_all, digits: string) => {
+        const n = Number(digits)
+        if (n === 0) return match[0]
+        // 越界 / 未参与匹配的组展开为空串（设计 §3.2），不报错
+        return match[n] ?? ''
+      })
+    }
+    last = match.index + match[0].length
+    // 零宽匹配（如 `a*`）会让 lastIndex 原地踏步 → 手动 +1，避免死循环
+    if (match[0].length === 0) re.lastIndex++
+  }
+  out += stem.slice(last)
+  return out
+}
+
 /** 删除模式的算法（F-03）。`text` 为空时规则不生效 */
-export function applyDelete(stem: string, text: string, caseSensitive: boolean): string {
+export function applyDelete(
+  stem: string,
+  text: string,
+  caseSensitive: boolean,
+  regexEnabled = false,
+): string {
+  if (regexEnabled) {
+    // 空 / 超长 / 非法 → 规则不生效（非法时界面另有红框提示，这里只保证不算错）
+    if (!compileRegex(text, caseSensitive).regex) return stem
+    return spliceAllRegex(stem, text, null, caseSensitive)
+  }
   return spliceAll(stem, text, null, caseSensitive)
 }
 
@@ -96,7 +182,12 @@ export function applyReplace(
   find: string,
   to: string,
   caseSensitive: boolean,
+  regexEnabled = false,
 ): string {
+  if (regexEnabled) {
+    if (!compileRegex(find, caseSensitive).regex) return stem
+    return spliceAllRegex(stem, find, to, caseSensitive)
+  }
   return spliceAll(stem, find, to, caseSensitive)
 }
 
@@ -159,21 +250,47 @@ function expand(text: string, n: string, d: string): string {
 
 /* ── 对外主函数 ─────────────────────────────────────────────────────── */
 
-/** 只算「新主体」：不管扩展名、不判冲突、不碰文件 */
+/** F-11 大小写转换。只对新名主体做，扩展名由调用方原样拼回，不经过这里 */
+export function applyCaseTransform(s: string, t: CaseTransform): string {
+  switch (t) {
+    case 'lower':
+      return s.toLowerCase()
+    case 'upper':
+      return s.toUpperCase()
+    case 'capitalize':
+      // 只动首字符、其余原样（非破坏性：不吞掉驼峰 meetingNotes）
+      return s === '' ? s : s.charAt(0).toUpperCase() + s.slice(1)
+    case 'none':
+    default:
+      return s
+  }
+}
+
+/**
+ * 只算「新主体」：不管扩展名、不判冲突、不碰文件。
+ *
+ * 执行顺序（设计 §5 唯一权威）：**先按模式算出主体，最后整体做大小写**。
+ */
 export function computeNewStem(
   parts: NameParts,
   rule: RuleConfig,
   ctx: RuleContext,
 ): string {
+  const stem = computeStemByMode(parts, rule, ctx)
+  return applyCaseTransform(stem, rule.caseTransform ?? 'none')
+}
+
+function computeStemByMode(parts: NameParts, rule: RuleConfig, ctx: RuleContext): string {
   switch (rule.mode) {
     case 'delete':
-      return applyDelete(parts.stem, rule.delete.text ?? '', rule.caseSensitive)
+      return applyDelete(parts.stem, rule.delete.text ?? '', rule.caseSensitive, rule.regexEnabled ?? false)
     case 'replace':
       return applyReplace(
         parts.stem,
         rule.replace.find ?? '',
         rule.replace.to ?? '',
         rule.caseSensitive,
+        rule.regexEnabled ?? false,
       )
     case 'rule':
       return applyRuleMode(parts.stem, rule.rule, ctx)

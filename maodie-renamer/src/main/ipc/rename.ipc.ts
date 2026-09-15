@@ -28,11 +28,17 @@ function sanitizeRule(raw: unknown): RuleConfig {
   const seqPosition = r.seqPosition === 'prefix' ? 'prefix' : 'suffix'
   const dateFormat =
     r.dateFormat === 'YYYYMMDD' || r.dateFormat === 'YYYY年MM月DD日' ? r.dateFormat : 'YYYY-MM-DD'
+  const caseTransform =
+    src.caseTransform === 'lower' || src.caseTransform === 'upper' || src.caseTransform === 'capitalize'
+      ? src.caseTransform
+      : 'none'
 
   return {
     mode,
     caseSensitive: bool(src.caseSensitive, DEFAULT_RULE.caseSensitive),
     autoResolveConflict: bool(src.autoResolveConflict, DEFAULT_RULE.autoResolveConflict),
+    regexEnabled: bool(src.regexEnabled, DEFAULT_RULE.regexEnabled),
+    caseTransform,
     delete: { text: str(del.text) },
     replace: { find: str(rep.find), to: str(rep.to) },
     rule: {

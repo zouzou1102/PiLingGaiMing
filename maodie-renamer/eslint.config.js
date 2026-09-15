@@ -225,4 +225,19 @@ export default tseslint.config(
       'no-restricted-imports': 'off',
     },
   },
+
+  // 冒烟驱动器（CommonJS，跑在 Electron 内置 Node 里）：它们本就靠 require 载入
+  // 被测主进程入口与 electron 模块，不能改成 ESM。这里只放宽"必须用 require"这一件事，
+  // 其余规则照旧——生产代码（src/）的护栏一条都不松。
+  {
+    files: ['tests/**/*.js', 'tools/**/*.js'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'no-restricted-syntax': 'off',
+      'no-restricted-globals': 'off',
+      'no-restricted-imports': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
 )

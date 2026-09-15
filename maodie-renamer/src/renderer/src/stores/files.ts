@@ -48,9 +48,16 @@ export const useFilesStore = defineStore('files', () => {
   let latestReqId = 0
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
+  /** 规则 store：既用来算预览，也用它暴露的 regexError 做门控（故先于 canExecute 声明）*/
+  const ruleStore = useRuleStore()
+
   const total = computed(() => items.value.length)
   const canExecute = computed(
-    () => !previewPending.value && items.value.some((i) => i.status === 'changed' || i.status === 'conflict'),
+    () =>
+      !previewPending.value &&
+      // ★ 正则非法时不允许执行（设计 §3.3：复用 P0 的置灰机制，不新增交互）
+      !ruleStore.regexError &&
+      items.value.some((i) => i.status === 'changed' || i.status === 'conflict'),
   )
   const needsVirtualList = computed(() => items.value.length > VIRTUAL_LIST_THRESHOLD)
   const executableCount = computed(
@@ -66,8 +73,6 @@ export const useFilesStore = defineStore('files', () => {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
   }
 
-  const ruleStore = useRuleStore()
-
   /** 200ms 防抖后重算全量预览（IX-050）*/
   function requestPreview(): void {
     if (debounceTimer !== undefined) clearTimeout(debounceTimer)
@@ -76,6 +81,9 @@ export const useFilesStore = defineStore('files', () => {
 
   async function runPreview(): Promise<void> {
     debounceTimer = undefined
+    // ★ 正则非法时**不重算**：保留上一次的合法结果（设计 §3.3），
+    //   否则会把列表刷成一片「无变化」，既闪动又误导用户。
+    if (ruleStore.regexError) return
     const req: PreviewItemInput[] = items.value.map((i) => ({
       id: i.id,
       dirPath: i.dirPath,
