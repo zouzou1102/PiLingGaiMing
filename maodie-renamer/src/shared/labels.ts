@@ -2,6 +2,7 @@
  * 枚举 → 中文标签。界面与规则摘要共用，避免同一枚举在两处出现不同措辞。
  */
 
+import type { Theme } from './theme'
 import type { CaseTransform, ConflictKind, DateFormat, ItemStatus, SeqPosition } from './types'
 
 export function seqPositionLabel(v: SeqPosition): string {
@@ -18,6 +19,13 @@ export const CASE_TRANSFORM_OPTIONS: Array<{ value: CaseTransform; label: string
   { value: 'lower', label: '全部小写' },
   { value: 'upper', label: '全部大写' },
   { value: 'capitalize', label: '首字母大写' },
+]
+
+/** F-14 主题三选一的选项（顺序即界面顺序：跟随系统 / 始终浅色 / 始终深色）*/
+export const THEME_OPTIONS: Array<{ value: Theme; label: string }> = [
+  { value: 'system', label: '跟随系统' },
+  { value: 'light', label: '始终浅色' },
+  { value: 'dark', label: '始终深色' },
 ]
 
 /** 规则摘要里的大小写后缀；'none' → 空串（摘要不追加）*/

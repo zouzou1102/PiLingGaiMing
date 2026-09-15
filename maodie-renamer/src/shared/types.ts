@@ -14,6 +14,7 @@
  */
 
 import type { MdErrorCode } from './errors'
+import { DEFAULT_THEME, type Theme } from './theme'
 
 /* ══ 通用返回 ══════════════════════════════════════════════════════════ */
 
@@ -342,8 +343,8 @@ export interface Prefs {
   reduceMotion: boolean
   /** 超过多少项弹二次确认（默认 10） */
   confirmThreshold: number
-  /** 首版只有 light（深色模式为 P2） */
-  theme: 'light'
+  /** 主题三态（P2-A）：system 跟随系统 / light 始终浅色 / dark 始终深色 */
+  theme: Theme
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -351,7 +352,7 @@ export const DEFAULT_PREFS: Prefs = {
   soundEnabled: true,
   reduceMotion: false,
   confirmThreshold: 10,
-  theme: 'light',
+  theme: DEFAULT_THEME,
 }
 
 export interface StorageWarningPayload {
@@ -388,7 +389,7 @@ export type PrefsFile = Envelope<{
   soundEnabled: boolean
   reduceMotion: boolean
   confirmThreshold: number
-  theme: 'light'
+  theme: Theme
 }>
 
 /* ══ preload 暴露面（window.maodie）════════════════════════════════════ */

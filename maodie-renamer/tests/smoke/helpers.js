@@ -308,6 +308,30 @@ async function clickAt(win, selector, { scroll = true } = {}) {
   return p;
 }
 
+/**
+ * 按窗口坐标点一下（不定位元素）。
+ *
+ * 为什么需要它：有些区域「一整个元素」但只有一部分可点。最典型的是弹窗遮罩
+ * `.md-mask`（fixed inset:0，铺满整窗）—— 它的关闭逻辑挂在 `@click.self` 上，
+ * 点中心只会落在弹窗本体上，点不中遮罩。元素中心点这条路在这里天然走不通，
+ * 所以补一个「我就要点这个坐标」的操作。
+ */
+async function clickPoint(win, x, y, { label = '' } = {}) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error(`坐标非法，拒绝点击：(${x}, ${y})`);
+  }
+  await cursorMove(win, x, y);
+  await sleep(Math.max(140, config.slow * 0.5));
+  win.webContents.sendInputEvent({ type: 'mouseMove', x, y });
+  await sleep(tick());
+  win.webContents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
+  await sleep(tick());
+  win.webContents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 });
+  await cursorRipple(win, x, y);
+  await sleep(tick());
+  return { x, y, label };
+}
+
 async function doubleClickAt(win, selector) {
   const p = await scrollIntoView(win, selector);
   await cursorMove(win, p.x, p.y);
@@ -535,6 +559,8 @@ function makeRecorder(ops) {
   };
   // —— 操作（发真实输入事件）——
   rec.click = (sel) => add('click', `点 ${sel}`, [sel]);
+  /** 按窗口坐标点一下；第三参是给人看的说明（报告横幅会显示） */
+  rec.clickPoint = (x, y, label) => add('clickPoint', label || `点坐标 (${x}, ${y})`, [x, y]);
   rec.dblclick = (sel) => add('dblclick', `双击 ${sel}`, [sel]);
   rec.hover = (sel) => add('hover', `移到 ${sel} 上`, [sel]);
   rec.drag = (a, b) => add('drag', `${a} 拖到 ${b}`, [a, b]);
@@ -560,6 +586,17 @@ function makeRecorder(ops) {
   rec.seeStyleSettled = (sel, prop, expected, label) =>
     add('seeStyleSettled', label || `${sel} 的 ${prop}（过渡结束后）`, [sel, prop, expected]);
   rec.seeCount = (sel, n, label) => add('seeCount', label || `${sel} 有 ${n} 个`, [sel, n]);
+  /**
+   * 断言「任意表达式的求值结果 === 期望值」。
+   *
+   * 用途：有些真值说不成「某个元素的某个属性等于某个常量」——
+   * 最典型的是「现在解析出来的主题，是否等于系统深浅色信号所要求的那一个」，
+   * 它的期望值取决于跑测试的这台机器，写不成字面量。
+   * 用表达式把它说清楚，失败时报告里同样有 期望/实际 两栏，不是"糊过去"。
+   * 表达式必须读**渲染后的真值**（铁律 5）。
+   */
+  rec.seeThat = (expr, expected, label) =>
+    add('seeThat', label || `表达式结果应为 ${JSON.stringify(expected)}：${cut(expr)}`, [expr, expected]);
   rec.seeStyle = (sel, prop, expected, label) => add('seeStyle', label || `${sel} 的 ${prop}`, [sel, prop, expected]);
   rec.seeAttr = (sel, attr, expected, label) => add('seeAttr', label || `${sel} 的 ${attr}`, [sel, attr, expected]);
   return rec;
@@ -585,6 +622,7 @@ async function runOp(win, op, assert) {
   const [a, b, c] = op.args;
   switch (op.kind) {
     case 'click': await clickAt(win, a); break;
+    case 'clickPoint': await clickPoint(win, a, b); break;
     case 'dblclick': await doubleClickAt(win, a); break;
     case 'hover': await hoverAt(win, a); break;
     case 'drag': await dragTo(win, a, b); break;
@@ -618,6 +656,7 @@ async function runOp(win, op, assert) {
       break;
     }
     case 'seeCount': assert(op.label, await evalIn(win, countExpr(a)), b); break;
+    case 'seeThat': assert(op.label, await evalIn(win, `(${a})`), b); break;
     case 'seeStyleSettled': {
       // 轮询到样式稳定值再断言（过渡动画期间读到的是插值，见 makeRecorder 里的说明）
       const t0 = Date.now();
@@ -870,6 +909,7 @@ module.exports = {
   cursorRipple,
   scrollIntoView,
   clickAt,
+  clickPoint,
   doubleClickAt,
   hoverAt,
   dragTo,

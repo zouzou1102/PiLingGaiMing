@@ -18,7 +18,7 @@ import { usePrefsStore } from './prefs'
 import { useRuleStore } from './rule'
 import { playFailure, playSuccess } from '../utils/sound'
 
-export type ModalKind = 'none' | 'result' | 'conflict' | 'confirm'
+export type ModalKind = 'none' | 'result' | 'conflict' | 'confirm' | 'settings'
 
 export type ConfirmKind = 'rename' | 'undoOne' | 'undoAll' | 'clear'
 
@@ -383,6 +383,12 @@ export const useTaskStore = defineStore('task', () => {
     modal.value = 'none'
   }
 
+  /** P2-A：打开设置（SCR-07）。走同一个 modal 状态机，保证「同时只有一个弹窗」，
+   *  并且 Esc / 点遮罩的关闭逻辑可以原样复用，不需要另写一套。*/
+  function openSettings(): void {
+    modal.value = 'settings'
+  }
+
   function todayOf(): string {
     const d = new Date()
     const p = (n: number) => String(n).padStart(2, '0')
@@ -409,6 +415,7 @@ export const useTaskStore = defineStore('task', () => {
     askClear,
     undoLast,
     closeModal,
+    openSettings,
     setStatusOverride,
   }
 })

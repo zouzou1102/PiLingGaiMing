@@ -107,10 +107,26 @@ const result = {
 
 // ─────────────────────────────────────────────────────────────────────
 // ③ 功能清单 —— 要验哪些功能，一个功能一行
-//   做： click / dblclick / hover / drag / type / key / scroll / wait / waitUntil
+//   做： click / clickPoint / dblclick / hover / drag / type / key / scroll / wait / waitUntil
 //   看： see / notSee / seeText / seeCount / seeStyle / seeAttr
 //   c.see* 读的都是**渲染后的真实结果**，不是"某个 class 加没加上"。
 // ─────────────────────────────────────────────────────────────────────
+
+/**
+ * 弹窗「真的画出来了」的判据。
+ *
+ * 为什么不能直接 `see` 完事：`.md-mask` / `.md-modal` 有 220ms 入场动画，
+ * 起始帧 opacity 恰好是 0（`@keyframes md-modalin`），那一帧 checkVisibility 为假。
+ * 快跑模式（SMOKE_FAST=1）下点击后没有停顿，会读到这个起始帧 → 假红。
+ * 所以先等它「不透明且可见」，再断言 —— 等出现不是放宽标准，而是等它本来就会到。
+ */
+const MODAL_VISIBLE = "(() => { const m = document.querySelector('.md-modal');"
+  + ' return !!m && m.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }); })()';
+
+/** 主列表卡片的底色 —— 深浅两主题差得最明显的一块，用它当"真的换主题了"的探针 */
+const CARD_BG = "(() => { const el = document.querySelector('.md-filelist');"
+  + " return el ? getComputedStyle(el).backgroundColor : ''; })()";
+
 const FEATURES = [
   feature('窗口出现、界面就绪', (c) =>
     c.see(READY_SELECTOR, `界面就绪元素可见（${READY_SELECTOR}）`)
@@ -301,6 +317,146 @@ const FEATURES = [
      .seeContains('.md-adv__demo', '没找到能匹配的内容', '并明确提示「没找到能匹配的内容」')
      .seeStyle('.md-adv__demonew', 'color', 'rgb(185, 172, 158)', '未变化时用灰字 #B9AC9E，而不是"变了"的橘色（不骗人）')
   ),
+
+  // ══ P2-A 第三版：设置面（SCR-07）+ 深色模式（F-14）════════════════════
+  // 设计来源：《P2-A轻量设计确认.md》v1.1（画板 20:1 设置面 / 20:129 深色对照）
+  // 这一段有三条"最容易假通过"的地方，所以断言都往"渲染后的真值"上打：
+  //   · 主题切换：不只看 class / data-*，而是看**卡片算出来的背景色**变了没有；
+  //   · 减少动画：不只看属性，而是看**过渡时长算出来是不是 0**；
+  //   · 设置入口：不只看按钮在不在，而是看**里面的 SVG 真的渲染出来了**（切图接线断过就靠这条抓）。
+
+  feature('P2-A TC-28 设置入口：点标题栏滑杆按钮弹出设置弹窗', (c) =>
+    c.seeCount('.md-winbtn--settings', 1, '标题栏出现设置入口按钮（EL-106，在窗口三键左侧）')
+     .seeCount('.md-winbtn--settings .md-icon svg', 1, '入口按钮里的图标真的渲染出来了（切图 resources→assets 这条线是通的）')
+     .notSee('.md-modal', '弹窗默认不在页面上')
+     .click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .see('.md-modal', '点滑杆按钮后设置弹窗出现')
+     .seeText('.md-modal__title', '设置', '弹窗标题是「设置」')
+     .seeCount('.md-settings__seg .md-tab', 3, '主题是「三选一」（EL-108）')
+     .seeAttr('.md-settings__seg .md-tab:nth-child(2)', 'aria-pressed', 'true', '默认选中「始终浅色」（负责人答复第 4 条：任何机器上首屏一致）')
+     .seeAttr('.md-settings__seg .md-tab:nth-child(1)', 'aria-pressed', 'false', '「跟随系统」未被选中')
+     .seeCount('.md-settings__switch--sound', 1, '有「音效」开关（EL-109）')
+     .seeCount('.md-settings__switch--motion', 1, '有「减少动画」开关（EL-110 —— 补上 P0 就要求、此前却没有入口的那条无障碍）')
+     .seeText('.md-modal__foot--spread .md-hint', '设置立即生效，不需要重启。', '底部说明走 spread 布局（左说明 / 右按钮）')
+     .see('.md-modal__foot--spread .md-btn--primary', '底部「完成」按钮可见')
+  ),
+
+  feature('P2-A TC-28 关闭方式一：点遮罩空白处关闭', (c) =>
+    c.see('.md-modal', '关闭前弹窗还在')
+     // 遮罩铺满整窗，但正中被弹窗本体压着 —— 点中心只会点到弹窗身上。
+     // 所以点左下角空白：那里只可能是遮罩（弹窗宽 480，横向居中，左侧留白 ≥210px）。
+     .clickPoint(28, 300, '点遮罩左下角空白处（不是弹窗本体）')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .notSee('.md-modal', '点遮罩后弹窗关闭')
+  ),
+
+  feature('P2-A TC-28 关闭方式二：按 Esc 关闭', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .see('.md-modal', '再次打开设置弹窗')
+     .key('Escape')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .notSee('.md-modal', '按 Esc 后弹窗关闭')
+  ),
+
+  feature('P2-A TC-28 关闭方式三：点「完成」关闭（与另两种等价）', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .notSee('.md-modal', '点「完成」后弹窗关闭，不刷新、不跳转、不二次确认')
+  ),
+
+  feature('P2-A TC-29 主题「跟随系统」：解析结果就是系统信号（不猜、不写死）', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     // 先强制成「始终深色」再选「跟随系统」——这一步是有意的：
+     // 机器是深色就会保持、机器是浅色就必须**翻回浅色**。
+     // 于是「它真的在跟系统走」在两台不同设置的机器上都看得出来，
+     // 而不是在浅色机器上"本来就对"地假通过。
+     .click('.md-settings__seg .md-tab:nth-child(3)')
+     .waitUntil(`${CARD_BG} === 'rgb(46, 33, 25)'`, 8000)
+     .seeAttr('html', 'data-theme', 'dark', '先强制到「始终深色」')
+     .click('.md-settings__seg .md-tab:nth-child(1)')
+     // 先等这一下真的落稳（等 aria-pressed 变了再往下读）——
+     // 否则系统信号恰好等于当前主题时，后面的断言会在 IPC 回程之前抢先跑。
+     .waitUntil("document.querySelector('.md-settings__seg .md-tab:nth-child(1)')"
+       + ".getAttribute('aria-pressed') === 'true'", 8000)
+     // 色彩翻转比属性翻得慢半拍（媒体查询要等一次样式重算），所以先等它落定再断言
+     .waitUntil(`(() => { const m = matchMedia('(prefers-color-scheme: dark)').matches;`
+       + ` return ${CARD_BG} === (m ? 'rgb(46, 33, 25)' : 'rgb(255, 255, 255)'); })()`, 8000)
+     .seeAttr('.md-settings__seg .md-tab:nth-child(1)', 'aria-pressed', 'true', '「跟随系统」变为选中')
+     .seeThat("(() => { const t = document.documentElement.dataset.theme;"
+       + " return t === (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); })()", true,
+       'data-theme 严格等于系统信号解析出来的值（期望值取决于本机 Windows 设置，所以用表达式而不是写死）')
+     .seeThat(`${CARD_BG} === (matchMedia('(prefers-color-scheme: dark)').matches`
+       + " ? 'rgb(46, 33, 25)' : 'rgb(255, 255, 255)')", true,
+       '卡片底色也跟着系统信号走（深色系统→深底 #2E2119 / 浅色系统→白底）')
+     .seeCount('html[data-theme="light"], html[data-theme="dark"]', 1,
+       'data-theme 落在 light / dark 两个已知值之一（没把 "system" 这个字面量写进属性）')
+     .click('.md-settings__seg .md-tab:nth-child(2)')
+     .waitUntil(`${CARD_BG} === 'rgb(255, 255, 255)'`, 8000)
+     .seeAttr('html', 'data-theme', 'light', '恢复「始终浅色」，不把脏状态留给后面')
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+  ),
+
+  feature('P2-A TC-29 深色模式：切「始终深色」界面真的变深', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .seeAttr('html', 'data-theme', 'light', '切换前是浅色')
+     .seeStyle('.md-filelist', 'backgroundColor', 'rgb(255, 255, 255)', '切换前卡片是白底')
+     .seeStyle('.md-settings__seg', 'backgroundColor', 'rgb(247, 239, 227)', '切换前页签槽是浅凹陷色 #F7EFE3')
+     .seeStyle('.md-modal__foot--spread .md-btn--primary', 'color', 'rgb(42, 26, 16)',
+       '主按钮文字是深棕 #2A1A10（浅色下也改了 —— P2-A 唯一改动浅色现有观感的地方）')
+     .click('.md-settings__seg .md-tab:nth-child(3)')
+     .waitUntil(`${CARD_BG} === 'rgb(46, 33, 25)'`, 8000)
+     .seeAttr('html', 'data-theme', 'dark', '切换后 <html data-theme> = dark')
+     .seeAttr('.md-settings__seg .md-tab:nth-child(3)', 'aria-pressed', 'true', '「始终深色」变为选中')
+     .seeStyle('.md-filelist', 'backgroundColor', 'rgb(46, 33, 25)', '卡片底色真的变成深色 #2E2119')
+     .seeStyle('.md-settings__seg', 'backgroundColor', 'rgb(26, 18, 16)',
+       '页签槽变成 #1A1210 —— 仍比卡片暗（层级方向没弄反，否则选中态就看不见了）')
+     .seeStyle('.md-modal__foot--spread .md-btn--primary', 'color', 'rgb(42, 26, 16)',
+       '主按钮文字仍是深棕（品牌橘与橘底前景两主题同值）')
+     // 开关轨道描边：这是 P2-A 唯一"破例新增"的第 15 个令牌。
+     // box-shadow 的序列化格式各版本 Chrome 略有差异，所以判"含这个颜色"而不是全等字面量。
+     .waitUntil("(() => { const el = document.querySelector('.md-settings__switch--motion .md-switch__track');"
+       + " return !!el && getComputedStyle(el).boxShadow.includes('94, 74, 59'); })()", 8000)
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .seeStyle('.md-filelist', 'backgroundColor', 'rgb(46, 33, 25)',
+       '关掉弹窗后主界面仍然是深色（说明是全应用生效，不是只有弹窗里好看）')
+  ),
+
+  feature('P2-A TC-29 深色切回浅色：真的回来了', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .seeAttr('html', 'data-theme', 'dark', '打开设置时仍是深色（上一步的结果还在）')
+     .click('.md-settings__seg .md-tab:nth-child(2)')
+     .waitUntil(`${CARD_BG} === 'rgb(255, 255, 255)'`, 8000)
+     .seeAttr('html', 'data-theme', 'light', '切回浅色后 <html data-theme> = light')
+     .seeStyle('.md-filelist', 'backgroundColor', 'rgb(255, 255, 255)', '卡片底色回到白色')
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+  ),
+
+  feature('P2-A TC-31 减少动画：开启后动效时长真的归零', (c) =>
+    c.click('.md-winbtn--settings')
+     .waitUntil(MODAL_VISIBLE, 8000)
+     .seeAttr('html', 'data-reduce-motion', 'false', '默认关闭')
+     .seeStyle('.md-tab', 'transitionDuration', '0.18s', '开启前页签有 180ms 过渡（= 设计规范 §7 的 --md-dur-hover）')
+     .click('.md-settings__switch--motion')
+     .waitUntil("document.documentElement.dataset.reduceMotion === 'true'", 8000)
+     .seeAttr('html', 'data-reduce-motion', 'true', '开启后 <html data-reduce-motion> = true')
+     .seeStyle('.md-tab', 'transitionDuration', '0s', '过渡时长算出来是 0 —— 开关真的生效，不只是翻了个属性')
+     .click('.md-settings__switch--motion')
+     .waitUntil("document.documentElement.dataset.reduceMotion === 'false'", 8000)
+     .seeAttr('html', 'data-reduce-motion', 'false', '再点一下能关回去（不留脏状态）')
+     .click('.md-modal__foot--spread .md-btn--primary')
+     .waitUntil("!document.querySelector('.md-modal')", 8000)
+     .seeStyle('.md-tab', 'transitionDuration', '0.18s', '关掉「减少动画」后过渡恢复 180ms')
+  ),
 ];
 
 // ── 主流程 ───────────────────────────────────────────────────────────
@@ -361,6 +517,14 @@ app.whenReady().then(async () => {
       '原生 <select> 下拉弹窗的真实点选（下拉弹窗是 OS 级窗口，注入事件点不开；'
         + '本次「切换大小写」是 程序化聚焦 + 真实方向键 驱动的，change 事件由 Chromium 自己发）',
       '正则 ReDoS 主动中止（EX-16 的 Worker 计时中止本轮未实现，仅落地了 pattern 长度 ≤ 200 兜底）',
+      // ── P2-A ─────────────────────────────────────────────────────────
+      '首帧不闪烁（TC-30）：它说的是「窗口出现之前那一帧」，冒烟只能截到渲染完的画面 —— '
+        + '本轮未自动验证。做法见 tokens.css 文件头（深色挂 @media 不挂 [data-theme]，'
+        + '主进程建窗前设 themeSource + backgroundColor），常量另由单测钉住',
+      '真实 Windows 深色模式下的原生控件外观（滚动条 / 右键菜单）：交给 nativeTheme → 系统去画，断言不了',
+      '主题切换后 BrowserWindow.backgroundColor 不跟着改（只在建窗时设一次）—— '
+        + '深色下拖拽改变窗口尺寸时理论上可能瞬间露出建窗时的浅色底，本轮未观察到，也没处理',
+      '深色下的人眼观感（暖褐色深底好不好看、猫咪是否仍然可爱）：需要人看截图判断，断言判不了',
     ];
 
     // 隔离核验：真实数据目录指纹跑前跑后应相同

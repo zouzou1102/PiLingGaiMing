@@ -8,13 +8,19 @@
  *  2. **关闭时用同步写**（`flushJsonSync`）。`close` 之后进程随时退出，
  *     异步写会在写完之前就结束，用户最后一次调整的尺寸就丢了。
  *  3. **单实例锁**。两个实例同时改同一批文件会绕过进程内的写入队列。
+ *  4. **主题必须在 `new BrowserWindow` 之前定下来**（P2-A §7.1）。
+ *     窗口底色是「首帧不闪」那一帧用的颜色：先把深浅色信号交给 Electron，
+ *     再据此定底色，否则冷启动会先白一下再变深（验收 TC-30）。
  */
 
 import { BrowserWindow, app, screen, session } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_DEFAULT, WINDOW_MIN, WINDOW_SAVE_DEBOUNCE_MS } from '@shared/constants'
+import { windowBackgroundFor } from '@shared/theme'
 import type { WindowState } from '@shared/types'
 import { CURRENT_VERSION, MIGRATIONS } from './services/migrations'
+import { getPrefs } from './services/prefs-store'
+import { applyThemeSource, isDarkNow } from './services/theme'
 import {
   enqueueWrite,
   flushJsonSync,
@@ -99,6 +105,13 @@ export async function loadWindowState(): Promise<SavedWindow> {
 export async function createMainWindow(): Promise<BrowserWindow> {
   const state = await loadWindowState()
 
+  /* ★ 主题先定，再建窗口 —— 见文件头第 4 条铁律。
+     用户选的深/浅色先交给 Electron，再据「现在实际是不是深色」定窗口底色，
+     这样窗口出现的**第一帧**颜色就是对的（`prefs` 已在 bootstrap 里加载过，
+     所以这里拿到的是已落盘的设置，不是默认值）。 */
+  const theme = getPrefs().theme
+  applyThemeSource(theme)
+
   win = new BrowserWindow({
     width: state.width,
     height: state.height,
@@ -110,7 +123,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     frame: false, // 自绘标题栏（设计规范 §5.1 R-01 高 44px）
     resizable: true,
     maximizable: true,
-    backgroundColor: '#FFFBF5',
+    backgroundColor: windowBackgroundFor(isDarkNow(theme)),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // ── 进程安全配置（技术方案 §1.3）────────────────────────────────

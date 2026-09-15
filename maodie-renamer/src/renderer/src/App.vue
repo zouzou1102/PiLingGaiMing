@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 外壳：标题栏 R-01 + 视图切换（main / history）+ 状态栏 R-07 + 三个弹窗。
+ * 外壳：标题栏 R-01 + 视图切换（main / history）+ 状态栏 R-07 + 四个弹窗。
  *
  * 弹窗用 AppModal 里的 Teleport 挂到 body，所以它们与 view 无关
  * （切到历史页时弹窗依然能正确覆盖整个窗口）。
@@ -16,6 +16,7 @@ import StatusBar from './components/StatusBar.vue'
 import ConfirmModal from './components/ConfirmModal.vue'
 import ConflictModal from './components/ConflictModal.vue'
 import ResultModal from './components/ResultModal.vue'
+import SettingsModal from './components/SettingsModal.vue'
 import MainView from './views/MainView.vue'
 import HistoryView from './views/HistoryView.vue'
 import { useKeyboard } from './composables/useKeyboard'
@@ -84,9 +85,10 @@ useKeyboard({
 
     <StatusBar />
 
-    <!-- 三个弹窗与 view 无关（Teleport 到 body，遮罩覆盖整个窗口）-->
+    <!-- 四个弹窗与 view 无关（Teleport 到 body，遮罩覆盖整个窗口）-->
     <ResultModal />
     <ConflictModal />
     <ConfirmModal />
+    <SettingsModal />
   </div>
 </template>
