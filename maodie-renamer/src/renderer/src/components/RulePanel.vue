@@ -12,6 +12,9 @@ import { computed, ref } from 'vue'
 import MdIcon from './MdIcon.vue'
 import { useRuleStore } from '../stores/rule'
 import { CASE_TRANSFORM_OPTIONS } from '@shared/labels'
+import { REGEX_CHEATSHEET, REGEX_DEMO_FILE } from '@shared/regex-cheatsheet'
+import { joinName, splitName } from '@shared/name-split'
+import { applyDelete, applyReplace } from '@shared/rule-engine'
 import type { CaseTransform, DateFormat, RuleMode, SeqPosition } from '@shared/types'
 
 const rule = useRuleStore()
@@ -35,6 +38,41 @@ const regexOn = computed(() => !isRuleMode.value && rule.rule.regexEnabled)
 const advancedCount = computed(
   () => (regexOn.value ? 1 : 0) + (rule.rule.caseTransform !== 'none' ? 1 : 0),
 )
+
+/**
+ * EL-103「? 看不懂？」小抄卡的开合。
+ * 与折叠条同理：**纯 UI 状态**，不进 RuleConfig、不进 IPC（设计 §10.1）。
+ */
+const helpOpen = ref(false)
+
+/** EL-104 照抄表：按当前模式过滤 —— 删除模式没有「替换框」，带 $1 的写法在那里没意义 */
+const cheatRows = computed(() => REGEX_CHEATSHEET.filter((r) => r.modes.includes(rule.rule.mode)))
+
+/** 演示用示例名的拆分（扩展名永不参与规则）*/
+const DEMO_PARTS = splitName(REGEX_DEMO_FILE, false)
+
+/**
+ * EL-105 当场演示的结果；null = 现在没什么可演示（正则没开 / 写法有错 / 还没填内容）。
+ *
+ * 用 `applyDelete` / `applyReplace` —— 与真正改名、与预览 Worker **同一个函数**
+ * （ADR-001 预览 ≡ 执行），所以演示结果不可能和实际执行结果不一致。
+ */
+const demoTo = computed<string | null>(() => {
+  if (!regexOn.value || rule.regexError) return null
+  const r = rule.rule
+  const stem =
+    r.mode === 'delete'
+      ? r.delete.text === ''
+        ? null
+        : applyDelete(DEMO_PARTS.stem, r.delete.text, r.caseSensitive, true)
+      : r.replace.find === ''
+        ? null
+        : applyReplace(DEMO_PARTS.stem, r.replace.find, r.replace.to, r.caseSensitive, true)
+  return stem === null ? null : joinName(stem, DEMO_PARTS.ext)
+})
+
+/** 填了内容，但这条示例名字一个字都没变 —— 得说清楚，不能假装演示成功 */
+const demoUnchanged = computed(() => demoTo.value === REGEX_DEMO_FILE)
 
 /** 前缀 / 后缀里用了 {d} 但没勾「启用日期」时给个提示（否则会静默展开成空串）*/
 const needsDateHint = computed(
@@ -271,27 +309,69 @@ function setNumber(key: 'seqStart' | 'seqStep' | 'seqPad', raw: string): void {
       <div v-if="advancedOpen" class="md-adv__body">
         <!-- EL-057 正则匹配开关：仅删除 / 替换模式出现 -->
         <template v-if="!isRuleMode">
-          <label class="md-check">
-            <input
-              type="checkbox"
-              :checked="rule.rule.regexEnabled"
-              @change="rule.patch({ regexEnabled: ($event.target as HTMLInputElement).checked })"
-            />
-            <span class="md-check__box"><MdIcon name="check" :size="11" /></span>
-            <span class="md-check__label">用正则匹配</span>
-          </label>
+          <!-- 「?」按钮必须待在 <label> **外面** —— 塞进 label 里点它会连带勾选复选框 -->
+          <div class="md-adv__switchrow">
+            <label class="md-check">
+              <input
+                type="checkbox"
+                :checked="rule.rule.regexEnabled"
+                @change="rule.patch({ regexEnabled: ($event.target as HTMLInputElement).checked })"
+              />
+              <span class="md-check__box"><MdIcon name="check" :size="11" /></span>
+              <span class="md-check__label">用正则匹配</span>
+            </label>
+            <button
+              type="button"
+              class="md-adv__helpbtn"
+              :aria-expanded="helpOpen"
+              @click="helpOpen = !helpOpen"
+            >
+              ? 看不懂？
+            </button>
+          </div>
 
-          <p class="md-hint">开启后，「删除字符 / 替换字符」里的内容按正则表达式解释</p>
+          <p class="md-hint md-adv__why">
+            不用正则：你填什么就找一模一样的字 —— 填 <code>2026-08-01</code>，换个日期就找不着了。<br />
+            用正则：你说「长什么样」，数字换了也认得出 —— 填 <code>\d+</code>，一串数字不管几位都能找到。
+          </p>
 
-          <template v-if="regexOn">
-            <p class="md-hint md-adv__syntax">
-              语法：<code>.</code> 任意字符 · <code>\d</code> 数字 · <code>\w</code> 字母数字下划线 ·
-              <code>( )</code> 捕获组 · <code>* + ?</code> 重复 · <code>^ $</code> 首尾
-            </p>
+          <!-- EL-104 照抄表（默认收起，点 EL-103 打开）-->
+          <div v-if="helpOpen" class="md-adv__cheat">
+            <ul class="md-adv__cheatlist">
+              <li v-for="row in cheatRows" :key="row.goal" class="md-adv__cheatrow">
+                <span class="md-adv__cheatgoal">{{ row.goal }}</span>
+                <span class="md-adv__cheatfill">
+                  查找填 <code>{{ row.find }}</code>
+                  <template v-if="rule.rule.mode === 'replace'">
+                    ｜ 替换填 <code>{{ row.to === '' ? '（留空）' : row.to }}</code>
+                  </template>
+                </span>
+                <span class="md-adv__cheatex">
+                  <code>{{ row.sampleFrom }}</code> → <code>{{ row.sampleTo }}</code>
+                </span>
+              </li>
+            </ul>
             <p v-if="rule.rule.mode === 'replace'" class="md-hint">
-              替换串里可用 <code>$1</code> <code>$2</code> 引用捕获组
+              括号 <code>( )</code> = 先圈出来存着；<code>$1</code> = 把圈出来的第 1 段搬过来（<code>$2</code>
+              就是第 2 段）。替换框留空 = 直接删掉。
             </p>
-          </template>
+          </div>
+
+          <!-- EL-105 当场演示：拿上面填的内容，对固定示例名字实时算一遍 -->
+          <div v-if="regexOn && !rule.regexError" class="md-adv__demo">
+            <p class="md-adv__demotitle">当场看看（拿这条示例名字试的，不是你列表里的文件）</p>
+            <template v-if="demoTo !== null">
+              <p class="md-adv__demoline">
+                <code>{{ REGEX_DEMO_FILE }}</code>
+                <span class="md-adv__demoarrow" aria-hidden="true">→</span>
+                <code class="md-adv__demonew" :class="{ 'md-adv__demonew--same': demoUnchanged }">{{ demoTo }}</code>
+              </p>
+              <p v-if="demoUnchanged" class="md-hint">
+                这条示例里没找到能匹配的内容 —— 换个写法试试。
+              </p>
+            </template>
+            <p v-else class="md-hint">在上面「查找」框里填点什么，这里就会立刻跟着变。</p>
+          </div>
         </template>
 
         <!-- EL-059 大小写转换：三种模式都出现 -->
@@ -485,8 +565,128 @@ code {
   background: var(--md-bg-warm);
 }
 
-.md-adv__syntax {
+/* ── EL-103 / EL-104 / EL-105 小白化说明区 ───────────────────────────
+   为什么不再用「语法：. 任意字符 · \d 数字 …」那套：那是给**已经会正则的人**查的，
+   新手看完仍不知道自己要填什么。改成「想做什么 → 填什么 → 变成什么」的照抄表。 */
+
+/* 开关行：复选框在左、小抄按钮在右（按钮必须待在 <label> 外，见模板注释）*/
+.md-adv__switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-space-2);
+}
+
+.md-adv__helpbtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--md-line-strong);
+  background: var(--md-bg-card);
+  color: var(--md-ink-2);
+  border-radius: var(--md-radius-badge);
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    color var(--md-dur-hover) ease,
+    border-color var(--md-dur-hover) ease;
+}
+
+.md-adv__helpbtn:hover,
+.md-adv__helpbtn[aria-expanded='true'] {
+  color: var(--md-orange-dark);
+  border-color: var(--md-orange-dark);
+}
+
+.md-adv__why {
   margin: 0;
+  line-height: 1.75;
+}
+
+/* 照抄表：一行 = 一个场景，读起来就是「想做什么 → 填什么 → 变成什么」 */
+.md-adv__cheat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-2);
+  padding: var(--md-space-2) var(--md-space-3);
+  border-radius: var(--md-radius-input);
+  background: var(--md-bg-card);
+  border: 1px solid var(--md-line);
+}
+
+.md-adv__cheatlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-2);
+}
+
+.md-adv__cheatrow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.md-adv__cheatgoal {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--md-ink-1);
+}
+
+.md-adv__cheatfill,
+.md-adv__cheatex {
+  font-size: 12px;
+  color: var(--md-ink-2);
+  word-break: break-all;
+}
+
+/* 当场演示 */
+.md-adv__demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-1);
+  padding: var(--md-space-2) var(--md-space-3);
+  border-radius: var(--md-radius-input);
+  background: var(--md-bg-sunken);
+}
+
+.md-adv__demotitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--md-ink-3);
+}
+
+.md-adv__demoline {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--md-space-2);
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.md-adv__demoarrow {
+  color: var(--md-ink-4);
+}
+
+/* 演示区底色比代码块深，把 code 提亮回卡片色才读得清 */
+.md-adv__demo code {
+  background: var(--md-bg-card);
+}
+
+/* 新名用「变了」的橘色 —— 与文件列表里新名高亮同色（animations.css 的 .md-diff-add）*/
+.md-adv__demonew {
+  color: var(--md-orange-dark);
+  background: var(--md-highlight-bg);
+}
+
+/* 一个字都没变时不能还亮着橘色 —— 那等于在骗人说"变了" */
+.md-adv__demonew--same {
+  color: var(--md-ink-4);
+  background: var(--md-bg-card);
 }
 
 .md-adv__case {
