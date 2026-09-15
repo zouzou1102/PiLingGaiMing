@@ -13,18 +13,20 @@
 import { computed } from 'vue'
 import { useFilesStore } from '../stores/files'
 import { useHistoryStore } from '../stores/history'
+import { useRuleStore } from '../stores/rule'
 import { useTaskStore } from '../stores/task'
 
 const files = useFilesStore()
 const task = useTaskStore()
 const history = useHistoryStore()
+const rule = useRuleStore()
 
 const text = computed(() => {
   if (task.statusText) return task.statusText
   if (files.transient) return files.transient.text
 
   const n = files.total
-  if (n === 0) return '就绪'
+  if (n === 0) return rule.regexError ? '正则表达式有误' : '就绪'
 
   const parts: string[] = [`共 ${n} 项`]
   if (files.stats.changed > 0) parts.push(`预览 ${files.stats.changed} 项将发生变化`)
@@ -32,6 +34,7 @@ const text = computed(() => {
 
   if (files.stats.conflict > 0) parts.push(`${files.stats.conflict} 项重名冲突（默认跳过，不会覆盖）`)
   if (files.stats.invalid > 0) parts.push(`${files.stats.invalid} 项名称非法`)
+  if (rule.regexError) parts.push('正则表达式有误')
   return parts.join(' · ')
 })
 
@@ -42,7 +45,7 @@ const evictedNotice = computed(() =>
 
 const dotClass = computed(() => {
   if (task.running) return 'md-dot--run'
-  if (files.stats.conflict > 0 || files.stats.invalid > 0) return 'md-dot--bad'
+  if (rule.regexError || files.stats.conflict > 0 || files.stats.invalid > 0) return 'md-dot--bad'
   return 'md-dot--ok'
 })
 

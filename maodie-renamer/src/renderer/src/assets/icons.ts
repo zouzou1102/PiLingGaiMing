@@ -17,6 +17,9 @@ import fileIcon from './icons/icon-文件.svg?raw'
 import folder from './icons/icon-文件夹.svg?raw'
 import rowDelete from './icons/icon-行内删除.svg?raw'
 import warn from './icons/icon-警告.svg?raw'
+// P1（F-10/F-11）：「进阶设置」折叠条的齿轮。用 currentColor 填充，
+// 这样常态/启用两态只靠 CSS 的 color 切换（#8A8178 ↔ #E08B33），无需两张切图。
+import gear from './icons/icon-进阶设置.svg?raw'
 
 // icon-最小化 / 最大化 / 关闭 三个切图已不再在此处引用：
 // 标题栏按钮改用猫咪切图 resources/cats/ui-btn-*.svg（设计规范 §R-01 定稿）。
@@ -31,6 +34,7 @@ export const ICONS = {
   folder,
   rowDelete,
   warn,
+  gear,
 } as const
 
 export type IconName = keyof typeof ICONS

@@ -10,6 +10,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { DEFAULT_RULE, type RuleConfig, type RuleMode } from '@shared/types'
 import { buildRuleSummary } from '@shared/rule-summary'
+import { compileRegex } from '@shared/rule-engine'
 
 function cloneDefault(): RuleConfig {
   return { ...DEFAULT_RULE, delete: { ...DEFAULT_RULE.delete }, replace: { ...DEFAULT_RULE.replace }, rule: { ...DEFAULT_RULE.rule } }
@@ -33,6 +34,21 @@ export const useRuleStore = defineStore('rule', () => {
   const summary = computed(() => buildRuleSummary(rule.value))
 
   const activeMode = computed(() => rule.value.mode)
+
+  /**
+   * F-10 正则非法时的中文原因（合法 / 未开启 / 空 pattern 时为 null）。
+   *
+   * 由「输入框红框」「状态栏提示」「开始改名置灰」三处共用 —— 单一来源，
+   * 避免三处各判一次导致文案或口径不一致。
+   */
+  const regexError = computed<string | null>(() => {
+    const r = rule.value
+    if (!r.regexEnabled) return null
+    // 规则化模式不涉及匹配，正则开关根本不出现，也就不校验
+    if (r.mode === 'rule') return null
+    const pattern = r.mode === 'delete' ? r.delete.text : r.replace.find
+    return compileRegex(pattern, r.caseSensitive).error
+  })
 
   function setMode(mode: RuleMode): void {
     if (rule.value.mode === mode) return
@@ -66,5 +82,5 @@ export const useRuleStore = defineStore('rule', () => {
     rule.value = cloneDefault()
   }
 
-  return { rule, summary, activeMode, setMode, patch, patchInner, reset }
+  return { rule, summary, activeMode, regexError, setMode, patch, patchInner, reset }
 })

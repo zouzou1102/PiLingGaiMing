@@ -2,7 +2,7 @@
  * 枚举 → 中文标签。界面与规则摘要共用，避免同一枚举在两处出现不同措辞。
  */
 
-import type { ConflictKind, DateFormat, ItemStatus, SeqPosition } from './types'
+import type { CaseTransform, ConflictKind, DateFormat, ItemStatus, SeqPosition } from './types'
 
 export function seqPositionLabel(v: SeqPosition): string {
   return v === 'prefix' ? '排在最前' : '排在最后'
@@ -10,6 +10,20 @@ export function seqPositionLabel(v: SeqPosition): string {
 
 export function dateFormatLabel(v: DateFormat): string {
   return v
+}
+
+/** F-11 大小写下拉的选项（顺序即界面顺序）*/
+export const CASE_TRANSFORM_OPTIONS: Array<{ value: CaseTransform; label: string }> = [
+  { value: 'none', label: '保持原样' },
+  { value: 'lower', label: '全部小写' },
+  { value: 'upper', label: '全部大写' },
+  { value: 'capitalize', label: '首字母大写' },
+]
+
+/** 规则摘要里的大小写后缀；'none' → 空串（摘要不追加）*/
+export function caseTransformLabel(v: CaseTransform): string {
+  if (v === 'none') return ''
+  return CASE_TRANSFORM_OPTIONS.find((o) => o.value === v)?.label ?? ''
 }
 
 export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
